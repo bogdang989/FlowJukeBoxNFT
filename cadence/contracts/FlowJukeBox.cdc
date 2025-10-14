@@ -21,6 +21,31 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     access(all) let defaultTrack: {String: AnyStruct}
 
     // -------------------------
+    // NowPlaying Struct
+    // -------------------------
+    access(all) struct NowPlaying {
+        access(all) let value: String        // Track URL
+        access(all) let displayName: String  // Track name for UI
+        access(all) let duration: UFix64     // Duration in seconds
+        access(all) let startTime: UFix64    // Block timestamp when started
+        access(all) let isDefault: Bool      // True if default track
+
+        init(
+            value: String,
+            displayName: String,
+            duration: UFix64,
+            startTime: UFix64,
+            isDefault: Bool
+        ) {
+            self.value = value
+            self.displayName = displayName
+            self.duration = duration
+            self.startTime = startTime
+            self.isDefault = isDefault
+        }
+    }
+
+    // -------------------------
     // Queue Entry
     // -------------------------
     access(all) struct QueueEntry {
@@ -63,7 +88,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         access(all) var queueEntries: [QueueEntry]
         access(all) var totalDuration: UFix64
         access(all) var totalBacking: UFix64
-        access(all) var nowPlaying: String
+        access(all) var nowPlaying: FlowJukeBox.NowPlaying?
         access(contract) var hasBeenPaidOut: Bool
 
         init(
@@ -80,7 +105,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             self.queueEntries = []
             self.totalDuration = 0.0
             self.totalBacking = 0.0
-            self.nowPlaying = ""
+            self.nowPlaying = nil
             self.hasBeenPaidOut = false
         }
 
@@ -121,13 +146,28 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         }
 
         // -------------------------
-        // Pure "pick next" (returns default if empty)
+        // Play next track (default if empty)
         // -------------------------
         access(all) fun playNext(): {String: AnyStruct} {
+            let now = getCurrentBlock().timestamp
+
             if self.queueEntries.length == 0 {
                 log("🎵 Queue empty — returning default track")
-                self.nowPlaying = (FlowJukeBox.defaultTrack["displayName"] as! String)
-                return FlowJukeBox.defaultTrack
+                let def = FlowJukeBox.NowPlaying(
+                    value: FlowJukeBox.defaultTrack["value"] as! String,
+                    displayName: FlowJukeBox.defaultTrack["displayName"] as! String,
+                    duration: FlowJukeBox.defaultTrack["duration"] as! UFix64,
+                    startTime: now,
+                    isDefault: true
+                )
+                self.nowPlaying = def
+                return {
+                    "value": def.value,
+                    "displayName": def.displayName,
+                    "duration": def.duration,
+                    "startTime": def.startTime,
+                    "isDefault": def.isDefault
+                }
             }
 
             var topIndex = 0
@@ -143,8 +183,23 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             }
 
             let next = self.queueEntries.remove(at: topIndex)
-            self.nowPlaying = next.displayName
-            return { "value": next.value, "displayName": next.displayName, "duration": next.duration }
+            let np = FlowJukeBox.NowPlaying(
+                value: next.value,
+                displayName: next.displayName,
+                duration: next.duration,
+                startTime: now,
+                isDefault: false
+            )
+            self.nowPlaying = np
+            log("▶️ Now playing: ".concat(np.displayName))
+
+            return {
+                "value": np.value,
+                "displayName": np.displayName,
+                "duration": np.duration,
+                "startTime": np.startTime,
+                "isDefault": np.isDefault
+            }
         }
 
         // Metadata Views
@@ -185,7 +240,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     }
 
     // -------------------------
-    // Collection
+    // Collection Resource
     // -------------------------
     access(all) resource Collection: NonFungibleToken.Collection {
         access(all) var ownedNFTs: @{UInt64: {NonFungibleToken.NFT}}
@@ -399,8 +454,9 @@ access(all) contract FlowJukeBox: NonFungibleToken {
                     bannerImage: media,
                     socials: {}
                 )
+            default:
+                return nil
         }
-        return nil
     }
 
     init() {
@@ -420,8 +476,8 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         let col <- create FlowJukeBox.Collection()
         self.account.storage.save(<- col, to: self.CollectionStoragePath)
 
-        let colCap = self.account.capabilities.storage.issue<&FlowJukeBox.Collection>(self.CollectionStoragePath)
-        self.account.capabilities.publish(colCap, at: self.CollectionPublicPath)
+        let cap = self.account.capabilities.storage.issue<&FlowJukeBox.Collection>(self.CollectionStoragePath)
+        self.account.capabilities.publish(cap, at: self.CollectionPublicPath)
 
         log("✅ FlowJukeBox deployed successfully.")
     }
