@@ -14,12 +14,15 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     access(all) let AdminStoragePath: StoragePath
     access(all) let contractAddress: Address
 
+    // Payout % (tunable later)
+    access(all) var payoutPercentage: UFix64
+
     // -------------------------
     // Queue Entry
     // -------------------------
     access(all) struct QueueEntry {
-        access(all) let value: String          // e.g. YouTube URL
-        access(all) let displayName: String    // e.g. “Drake – God's Plan”
+        access(all) let value: String
+        access(all) let displayName: String
         access(all) var totalBacking: UFix64
         access(all) var latestBacking: UFix64
         access(all) let duration: UFix64
@@ -57,6 +60,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         access(all) var totalDuration: UFix64
         access(all) var totalBacking: UFix64
         access(all) var nowPlaying: String
+        access(contract) var hasBeenPaidOut: Bool
 
         init(
             id: UInt64,
@@ -72,6 +76,11 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             self.totalDuration = 0.0
             self.totalBacking = 0.0
             self.nowPlaying = ""
+            self.hasBeenPaidOut = false
+        }
+
+        access(contract) fun markAsPaid() {
+            self.hasBeenPaidOut = true
         }
 
         // Internal entry logic
@@ -108,7 +117,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             self.totalDuration = self.totalDuration + duration
         }
 
-        // Play the next entry
+        // Play next entry
         access(all) fun playNext(): {String: AnyStruct} {
             if self.queueEntries.length == 0 {
                 panic("Queue empty.")
@@ -280,6 +289,42 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     }
 
     // -------------------------
+    // Payout Function
+    // -------------------------
+    access(all) fun payout(nftID: UInt64) {
+        let col = self.account.storage.borrow<&FlowJukeBox.Collection>(
+            from: self.CollectionStoragePath
+        ) ?? panic("FlowJukeBox.Collection not found")
+
+        let nftRef = col.borrowJukeboxNFT(nftID)
+            ?? panic("NFT not found")
+
+        if nftRef.hasBeenPaidOut {
+            panic("This NFT has already been paid out")
+        }
+
+        let amountToPay = nftRef.totalBacking * self.payoutPercentage
+
+        let vaultRef = self.account.storage.borrow<
+            auth(FungibleToken.Withdraw) &FlowToken.Vault
+        >(from: /storage/flowTokenVault)
+            ?? panic("FlowToken vault not found in contract storage")
+
+        let vault <- vaultRef.withdraw(amount: amountToPay)
+
+        let receiverCap = getAccount(nftRef.sessionOwner)
+            .capabilities
+            .borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
+            ?? panic("Receiver capability not found")
+
+        receiverCap.deposit(from: <- vault)
+
+        nftRef.markAsPaid()
+
+        log("💸 Paid out ".concat(amountToPay.toString()).concat(" FLOW to ").concat(nftRef.sessionOwner.toString()))
+    }
+
+    // -------------------------
     // Views & Init
     // -------------------------
     access(all) var totalSupply: UInt64
@@ -327,6 +372,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         self.AdminStoragePath      = /storage/FlowJukeBoxAdmin
         self.contractAddress       = self.account.address
         self.totalSupply = 0
+        self.payoutPercentage = 0.80
 
         let col <- create FlowJukeBox.Collection()
         self.account.storage.save(<- col, to: self.CollectionStoragePath)

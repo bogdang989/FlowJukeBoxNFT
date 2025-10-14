@@ -3,14 +3,18 @@
 ### Set variables for later
 
 TESTNET:
-`$SIGNER = "tn1"`
-`$CONTRACTADDR = "0x1a892184172f773e"`
-`$FLOWNETWORK = "testnet"`
+```
+$SIGNER = "tn1"
+$CONTRACTADDR = "0x1a892184172f773e"
+$FLOWNETWORK = "testnet"
+```
 
 EMULATOR:
-`$SIGNER = "emulator-account"`
-`$CONTRACTADDR = "0xf8d6e0586b0a20c7"`
-`$FLOWNETWORK = "emulator"`
+```
+$SIGNER = "emulator-account"
+$CONTRACTADDR = "0xf8d6e0586b0a20c7"
+$FLOWNETWORK = "emulator"
+```
 
 ### Commands
 List accounts:
@@ -43,3 +47,6 @@ List users jukeboxes:
 
 Get single jukebox details:
 `flow scripts execute .\cadence\scripts\get_jukebox_info.cdc 1 -n $FLOWNETWORK`
+
+Payout:
+`flow transactions send .\cadence\transactions\payout.cdc 1 -n $FLOWNETWORK --signer $SIGNER`

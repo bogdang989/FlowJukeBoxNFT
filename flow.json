@@ -234,6 +234,10 @@
 			"address": "179b6b1cb6755e31",
 			"key": "dddcb565523564d847cbe83589ddfad6a9cd7162f82f651a1c363e1f0087f849"
 		},
+		"acc5": {
+			"address": "179b6b1cb6755e31",
+			"key": "4e62442f138d68fba097ec9a85decf93f8a89804755d8e01ff68067849e23978"
+		},
 		"emulator-account": {
 			"address": "f8d6e0586b0a20c7",
 			"key": {
