@@ -17,12 +17,15 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     // Tunable payout % (default 80%)
     access(all) var payoutPercentage: UFix64
 
+    // Default fallback track
+    access(all) let defaultTrack: {String: AnyStruct}
+
     // -------------------------
     // Queue Entry
     // -------------------------
     access(all) struct QueueEntry {
-        access(all) let value: String          // e.g. YouTube URL
-        access(all) let displayName: String    // e.g. “Drake – God's Plan”
+        access(all) let value: String
+        access(all) let displayName: String
         access(all) var totalBacking: UFix64
         access(all) var latestBacking: UFix64
         access(all) let duration: UFix64
@@ -117,10 +120,14 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             self.totalDuration = self.totalDuration + duration
         }
 
-        // Pure "pick next" (no payout/burn here!)
+        // -------------------------
+        // Pure "pick next" (returns default if empty)
+        // -------------------------
         access(all) fun playNext(): {String: AnyStruct} {
             if self.queueEntries.length == 0 {
-                panic("Queue empty.")
+                log("🎵 Queue empty — returning default track")
+                self.nowPlaying = (FlowJukeBox.defaultTrack["displayName"] as! String)
+                return FlowJukeBox.defaultTrack
             }
 
             var topIndex = 0
@@ -295,7 +302,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     }
 
     // -------------------------
-    // Contract helper: payout + burn (internal)
+    // Payout + Burn (internal)
     // -------------------------
     access(contract) fun _payoutAndBurn(nftID: UInt64) {
         let col = self.account.storage.borrow<&FlowJukeBox.Collection>(
@@ -305,7 +312,6 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         let nftRef = col.borrowJukeboxNFT(nftID)
             ?? panic("NFT not found")
 
-        // Copy data we need BEFORE destroying/burning
         let owner: Address = nftRef.sessionOwner
         let amountToPay: UFix64 = nftRef.totalBacking * self.payoutPercentage
 
@@ -326,16 +332,14 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             nftRef.markAsPaid()
         }
 
-        // Burn AFTER payout
         col.removeAndDestroy(id: nftID)
-
-        log("💸 Payout ".concat(amountToPay.toString())
+        log("💸 Paid ".concat(amountToPay.toString())
             .concat(" FLOW to ").concat(owner.toString())
             .concat(" and burned NFT #").concat(nftID.toString()))
     }
 
     // -------------------------
-    // Public: playNext OR payout+burn if expired
+    // Public: playNext or payout+burn
     // -------------------------
     access(all) fun playNextOrPayout(nftID: UInt64): {String: AnyStruct}? {
         let col = self.account.storage.borrow<&FlowJukeBox.Collection>(
@@ -353,7 +357,6 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             return nil
         }
 
-        // return next play info
         let info = nftRef.playNext()
         return info
     }
@@ -407,6 +410,12 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         self.contractAddress       = self.account.address
         self.totalSupply = 0
         self.payoutPercentage = 0.80
+
+        self.defaultTrack = {
+            "value": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "displayName": "Default Track",
+            "duration": 180.0
+        }
 
         let col <- create FlowJukeBox.Collection()
         self.account.storage.save(<- col, to: self.CollectionStoragePath)
