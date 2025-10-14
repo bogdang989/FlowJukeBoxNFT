@@ -7,17 +7,12 @@ import "MetadataViews"
 access(all) contract FlowJukeBox: NonFungibleToken {
 
     // -------------------------
-    // Standard Paths
+    // Standard Paths & Metadata
     // -------------------------
     access(all) let CollectionStoragePath: StoragePath
     access(all) let CollectionPublicPath: PublicPath
     access(all) let AdminStoragePath: StoragePath
-
-    // -------------------------
-    // Treasury Vault (FLOW)
-    // -------------------------
-    access(all) let VaultStoragePath: StoragePath
-    access(all) let VaultPublicPath: PublicPath
+    access(all) let contractAddress: Address
 
     // -------------------------
     // Queue Entry
@@ -48,25 +43,30 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         access(all) let id: UInt64
         access(all) let sessionOwner: Address
         access(all) let queueIdentifier: String
+        access(all) let queueDuration: UFix64
 
         access(all) var queueEntries: [QueueEntry]
         access(all) var totalDuration: UFix64
         access(all) var totalBacking: UFix64
         access(all) var nowPlaying: String
 
-        init(id: UInt64, sessionOwner: Address, queueIdentifier: String) {
+        init(
+            id: UInt64,
+            sessionOwner: Address,
+            queueIdentifier: String,
+            queueDuration: UFix64
+        ) {
             self.id = id
             self.sessionOwner = sessionOwner
             self.queueIdentifier = queueIdentifier
+            self.queueDuration = queueDuration
             self.queueEntries = []
             self.totalDuration = 0.0
             self.totalBacking = 0.0
             self.nowPlaying = ""
         }
 
-        // ------------------------------------------------
-        // Add or Update Queue Entry (internal)
-        // ------------------------------------------------
+        // Internal entry logic
         access(contract) fun _addEntryInternal(
             value: String,
             backing: UFix64,
@@ -96,25 +96,21 @@ access(all) contract FlowJukeBox: NonFungibleToken {
 
             self.totalBacking = self.totalBacking + backing
             self.totalDuration = self.totalDuration + duration
-
-            log("🎵 Added entry to queue ".concat(self.queueIdentifier))
         }
 
-        // ------------------------------------------------
-        // Play Next Song (returns top-backed entry and removes it)
-        // ------------------------------------------------
+        // Play the next entry
         access(all) fun playNext(): {String: AnyStruct} {
             if self.queueEntries.length == 0 {
-                panic("Queue is empty — nothing to play.")
+                panic("Queue empty.")
             }
 
             var topIndex = 0
             var i = 1
             while i < self.queueEntries.length {
-                let current = self.queueEntries[i]
+                let cur = self.queueEntries[i]
                 let top = self.queueEntries[topIndex]
-                if current.totalBacking > top.totalBacking ||
-                   (current.totalBacking == top.totalBacking && current.latestBacking < top.latestBacking) {
+                if cur.totalBacking > top.totalBacking ||
+                   (cur.totalBacking == top.totalBacking && cur.latestBacking < top.latestBacking) {
                     topIndex = i
                 }
                 i = i + 1
@@ -122,19 +118,12 @@ access(all) contract FlowJukeBox: NonFungibleToken {
 
             let next = self.queueEntries.remove(at: topIndex)
             self.nowPlaying = next.value
-
-            log("▶️ Now playing ".concat(next.value)
-                .concat(" (duration ").concat(next.duration.toString()).concat("s)"))
-
-            return {
-                "value": next.value,
-                "duration": next.duration
-            }
+            return { "value": next.value, "duration": next.duration }
         }
 
-        // ------------------------------------------------
-        // Required NFT Standard + Metadata Views
-        // ------------------------------------------------
+        // -------------------------
+        // Metadata Views
+        // -------------------------
         access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
             return <- FlowJukeBox.createEmptyCollection(nftType: Type<@FlowJukeBox.NFT>())
         }
@@ -150,7 +139,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         access(all) fun resolveView(_ view: Type): AnyStruct? {
             switch view {
                 case Type<MetadataViews.Display>():
-                    let desc = "Flow Jukebox Session ".concat(self.queueIdentifier)
+                    let desc = "Flow Jukebox ".concat(self.queueIdentifier)
                     return MetadataViews.Display(
                         name: "🎵 Jukebox Session",
                         description: desc,
@@ -195,50 +184,76 @@ access(all) contract FlowJukeBox: NonFungibleToken {
 
         access(NonFungibleToken.Withdraw)
         fun withdraw(withdrawID: UInt64): @{NonFungibleToken.NFT} {
-            let token <- self.ownedNFTs.remove(key: withdrawID)
+            let t <- self.ownedNFTs.remove(key: withdrawID)
                 ?? panic("Missing NFT ID ".concat(withdrawID.toString()))
-            return <- token
+            return <- t
         }
 
         access(all) fun deposit(token: @{NonFungibleToken.NFT}) {
-            let t <- token as! @FlowJukeBox.NFT
-            let old <- self.ownedNFTs[t.id] <- t
+            let c <- token as! @FlowJukeBox.NFT
+            let old <- self.ownedNFTs[c.id] <- c
             destroy old
         }
 
         access(all) view fun getIDs(): [UInt64] { return self.ownedNFTs.keys }
-        access(all) view fun getLength(): Int { return self.ownedNFTs.length }
 
         access(all) view fun borrowNFT(_ id: UInt64): &{NonFungibleToken.NFT}? {
             return &self.ownedNFTs[id]
         }
 
         access(all) fun borrowJukeboxNFT(_ id: UInt64): &FlowJukeBox.NFT? {
-            if let nft = self.borrowNFT(id) {
-                return nft as! &FlowJukeBox.NFT
-            }
-            return nil
+            let any = self.borrowNFT(id)
+            if any == nil { return nil }
+            return any as! &FlowJukeBox.NFT
         }
     }
 
     // -------------------------
-    // Admin
+    // Admin (legacy)
     // -------------------------
     access(all) resource Admin {
         access(all) fun mintJukeboxSession(sessionOwner: Address, queueIdentifier: String): @FlowJukeBox.NFT {
-            let newID = FlowJukeBox.totalSupply + 1
-            FlowJukeBox.totalSupply = newID
+            let id = FlowJukeBox.totalSupply + 1
+            FlowJukeBox.totalSupply = id
             let nft <- create FlowJukeBox.NFT(
-                id: newID,
+                id: id,
                 sessionOwner: sessionOwner,
-                queueIdentifier: queueIdentifier
+                queueIdentifier: queueIdentifier,
+                queueDuration: 0.0
             )
             return <- nft
         }
     }
 
     // -------------------------
-    // Public Helper — anyone can fund + add entry
+    // Public Mint (10 FLOW fee)
+    // -------------------------
+    access(all) fun createJukeboxSession(
+        sessionOwner: Address,
+        queueIdentifier: String,
+        queueDuration: UFix64
+    ) {
+        let id = FlowJukeBox.totalSupply + 1
+        FlowJukeBox.totalSupply = id
+
+        let nft <- create FlowJukeBox.NFT(
+            id: id,
+            sessionOwner: sessionOwner,
+            queueIdentifier: queueIdentifier,
+            queueDuration: queueDuration
+        )
+
+        let col = self.account.storage.borrow<&FlowJukeBox.Collection>(
+            from: self.CollectionStoragePath
+        ) ?? panic("Contract collection not found")
+
+        col.deposit(token: <- nft)
+
+        log("✅ Public mint: FlowJukeBox #".concat(id.toString()))
+    }
+
+    // -------------------------
+    // Public depositBacking — anyone can add entries to any NFT
     // -------------------------
     access(all) fun depositBacking(
         nftID: UInt64,
@@ -247,31 +262,39 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         duration: UFix64,
         payment: @{FungibleToken.Vault}
     ) {
-        // deposit funds into treasury
-        let flowVault = self.account.storage.borrow<&{FungibleToken.Receiver}>(from: self.VaultStoragePath)
-            ?? panic("Treasury vault missing")
-        flowVault.deposit(from: <- payment)
+        // Deposit FLOW to contract’s FlowToken vault
+        let receiver = self.account.capabilities.borrow<&{FungibleToken.Receiver}>(
+            /public/flowTokenReceiver
+        ) ?? panic("FlowToken receiver not found in contract account")
 
-        // borrow jukebox NFT from contract’s own collection
-        let colRef = self.account.storage.borrow<&FlowJukeBox.Collection>(
+        let amount = payment.balance
+        receiver.deposit(from: <- payment)
+
+        // Borrow NFT reference
+        let collectionRef = self.account.storage.borrow<&FlowJukeBox.Collection>(
             from: self.CollectionStoragePath
-        ) ?? panic("Contract collection not found")
+        ) ?? panic("FlowJukeBox.Collection not found in contract storage")
 
-        let nftRef = colRef.borrowJukeboxNFT(nftID)
-            ?? panic("Jukebox NFT not found")
+        let nftRef = collectionRef.borrowJukeboxNFT(nftID)
+            ?? panic("NFT with given ID not found")
 
+        // Update NFT’s queue
+        let now = getCurrentBlock().timestamp
         nftRef._addEntryInternal(
             value: value,
-            backing: 1.0, // could reflect payment.amount if FLOWToken supports reading it
+            backing: amount,
             duration: duration,
-            timestamp: getCurrentBlock().timestamp
+            timestamp: now
         )
 
-        log("✅ Added public entry from ".concat(from.toString()))
+        log("💰 Backing of ".concat(amount.toString())
+            .concat(" FLOW added for NFT #")
+            .concat(nftID.toString())
+            .concat(" by ").concat(from.toString()))
     }
 
     // -------------------------
-    // Views
+    // Contract Views
     // -------------------------
     access(all) view fun getContractViews(resourceType: Type?): [Type] {
         return [Type<MetadataViews.NFTCollectionData>(), Type<MetadataViews.NFTCollectionDisplay>()]
@@ -307,7 +330,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     }
 
     // -------------------------
-    // Contract State & Init
+    // State & Initialization
     // -------------------------
     access(all) var totalSupply: UInt64
 
@@ -319,27 +342,18 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         self.CollectionStoragePath = /storage/FlowJukeBoxCollection
         self.CollectionPublicPath  = /public/FlowJukeBoxCollection
         self.AdminStoragePath      = /storage/FlowJukeBoxAdmin
-        self.VaultStoragePath      = /storage/FlowJukeBoxVault
-        self.VaultPublicPath       = /public/FlowJukeBoxVault
+        self.contractAddress       = self.account.address
         self.totalSupply = 0
 
-        // Initialize admin + collection
         let admin <- create Admin()
         self.account.storage.save(<- admin, to: self.AdminStoragePath)
 
         let col <- create FlowJukeBox.Collection()
         self.account.storage.save(<- col, to: self.CollectionStoragePath)
+
         let colCap = self.account.capabilities.storage.issue<&FlowJukeBox.Collection>(self.CollectionStoragePath)
         self.account.capabilities.publish(colCap, at: self.CollectionPublicPath)
 
-        // ✅ Initialize FLOW vault (Cadence 1.0 syntax)
-        // createEmptyVault requires the vault type
-        let vault <- FlowToken.createEmptyVault(vaultType: Type<@FlowToken.Vault>())
-        self.account.storage.save(<- vault, to: self.VaultStoragePath)
-
-        let vaultCap = self.account.capabilities.storage.issue<&{FungibleToken.Receiver}>(self.VaultStoragePath)
-        self.account.capabilities.publish(vaultCap, at: self.VaultPublicPath)
-
-        log("✅ FlowJukeBox initialized successfully.")
+        log("✅ FlowJukeBox deployed successfully.")
     }
 }

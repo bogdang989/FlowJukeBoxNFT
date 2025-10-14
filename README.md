@@ -29,5 +29,5 @@ Add a song:
 See the queue:
 `flow scripts execute .\cadence\scripts\get_queue.cdc $CONTRACTADDR 1 -n $FLOWNETWORK`
 
-Play next:
+Play next (Admin):
 `flow transactions send .\cadence\transactions\play_next.cdc 1 -n $FLOWNETWORK --signer $SIGNER`

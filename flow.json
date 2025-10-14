@@ -226,6 +226,14 @@
 			"address": "179b6b1cb6755e31",
 			"key": "c2d7be9cf7095500785a9b6c2016e48e47b8b4613294a5bc75c298b4342d7359"
 		},
+		"acc3": {
+			"address": "179b6b1cb6755e31",
+			"key": "d0a7ab379982bd64ac8f716b9bd7ef8ee7df55082bdf0415ae0fdbf83171fbad"
+		},
+		"acc4": {
+			"address": "179b6b1cb6755e31",
+			"key": "dddcb565523564d847cbe83589ddfad6a9cd7162f82f651a1c363e1f0087f849"
+		},
 		"emulator-account": {
 			"address": "f8d6e0586b0a20c7",
 			"key": {

@@ -1,34 +1,36 @@
 import "FlowJukeBox"
+import "FlowToken"
+import "FungibleToken"
 
-/// Mints a new Flow Jukebox session NFT.
-/// Must be run by the contract owner (who holds the Admin resource).
-transaction(
-    queueIdentifier: String
-) {
-    prepare(
-        signer: auth(
-            BorrowValue,
-            SaveValue
-        ) &Account
-    ) {
-        // ✅ Explicitly specify type argument for borrow
-        let admin = signer.storage.borrow<&FlowJukeBox.Admin>(
-            from: StoragePath(identifier: "FlowJukeBoxAdmin")!
-        ) ?? panic("FlowJukeBox.Admin not found in signer storage (must be contract owner)")
+// Mints a new Jukebox NFT (10 FLOW fee handled here)
+transaction(queueIdentifier: String, queueDuration: UFix64) {
 
-        // Mint a new jukebox NFT
-        let newSession <- admin.mintJukeboxSession(
+    prepare(signer: auth(BorrowValue, FungibleToken.Withdraw) &Account) {
+        // Withdraw 10 FLOW from signer
+        let vault = signer.storage.borrow<
+            auth(FungibleToken.Withdraw) &FlowToken.Vault
+        >(from: /storage/flowTokenVault)
+            ?? panic("Missing FlowToken vault in signer storage")
+
+        let payment <- vault.withdraw(amount: 10.0)
+
+        // Deposit directly into contract’s FlowToken receiver
+        let receiver = getAccount(FlowJukeBox.contractAddress)
+            .capabilities
+            .borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
+            ?? panic("FlowJukeBox receiver not found")
+
+        receiver.deposit(from: <- payment)
+
+        // Mint new NFT (no payment param)
+        FlowJukeBox.createJukeboxSession(
             sessionOwner: signer.address,
-            queueIdentifier: queueIdentifier
+            queueIdentifier: queueIdentifier,
+            queueDuration: queueDuration
         )
+    }
 
-        // ✅ Explicit type argument again for Collection borrow
-        let collection = signer.storage.borrow<&FlowJukeBox.Collection>(
-            from: StoragePath(identifier: "FlowJukeBoxCollection")!
-        ) ?? panic("Signer has no FlowJukeBox.Collection in storage. Run setup_collection first.")
-
-        collection.deposit(token: <- newSession)
-
-        log("✅ Minted new FlowJukeBox session NFT with queue ID ".concat(queueIdentifier))
+    execute {
+        log("✅ Created FlowJukeBox session ".concat(queueIdentifier))
     }
 }
