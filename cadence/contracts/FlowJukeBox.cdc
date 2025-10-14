@@ -1,5 +1,6 @@
 import "NonFungibleToken"
 import "FungibleToken"
+import "FlowToken"
 import "ViewResolver"
 import "MetadataViews"
 
@@ -11,6 +12,12 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     access(all) let CollectionStoragePath: StoragePath
     access(all) let CollectionPublicPath: PublicPath
     access(all) let AdminStoragePath: StoragePath
+
+    // -------------------------
+    // Treasury Vault (FLOW)
+    // -------------------------
+    access(all) let VaultStoragePath: StoragePath
+    access(all) let VaultPublicPath: PublicPath
 
     // -------------------------
     // Queue Entry
@@ -58,9 +65,9 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         }
 
         // ------------------------------------------------
-        // Add new entry or update existing one
+        // Add or Update Queue Entry (internal)
         // ------------------------------------------------
-        access(all) fun addEntry(
+        access(contract) fun _addEntryInternal(
             value: String,
             backing: UFix64,
             duration: UFix64,
@@ -231,6 +238,39 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     }
 
     // -------------------------
+    // Public Helper — anyone can fund + add entry
+    // -------------------------
+    access(all) fun depositBacking(
+        nftID: UInt64,
+        from: Address,
+        value: String,
+        duration: UFix64,
+        payment: @{FungibleToken.Vault}
+    ) {
+        // deposit funds into treasury
+        let flowVault = self.account.storage.borrow<&{FungibleToken.Receiver}>(from: self.VaultStoragePath)
+            ?? panic("Treasury vault missing")
+        flowVault.deposit(from: <- payment)
+
+        // borrow jukebox NFT from contract’s own collection
+        let colRef = self.account.storage.borrow<&FlowJukeBox.Collection>(
+            from: self.CollectionStoragePath
+        ) ?? panic("Contract collection not found")
+
+        let nftRef = colRef.borrowJukeboxNFT(nftID)
+            ?? panic("Jukebox NFT not found")
+
+        nftRef._addEntryInternal(
+            value: value,
+            backing: 1.0, // could reflect payment.amount if FLOWToken supports reading it
+            duration: duration,
+            timestamp: getCurrentBlock().timestamp
+        )
+
+        log("✅ Added public entry from ".concat(from.toString()))
+    }
+
+    // -------------------------
     // Views
     // -------------------------
     access(all) view fun getContractViews(resourceType: Type?): [Type] {
@@ -279,15 +319,27 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         self.CollectionStoragePath = /storage/FlowJukeBoxCollection
         self.CollectionPublicPath  = /public/FlowJukeBoxCollection
         self.AdminStoragePath      = /storage/FlowJukeBoxAdmin
+        self.VaultStoragePath      = /storage/FlowJukeBoxVault
+        self.VaultPublicPath       = /public/FlowJukeBoxVault
         self.totalSupply = 0
 
+        // Initialize admin + collection
         let admin <- create Admin()
         self.account.storage.save(<- admin, to: self.AdminStoragePath)
 
         let col <- create FlowJukeBox.Collection()
         self.account.storage.save(<- col, to: self.CollectionStoragePath)
-
         let colCap = self.account.capabilities.storage.issue<&FlowJukeBox.Collection>(self.CollectionStoragePath)
         self.account.capabilities.publish(colCap, at: self.CollectionPublicPath)
+
+        // ✅ Initialize FLOW vault (Cadence 1.0 syntax)
+        // createEmptyVault requires the vault type
+        let vault <- FlowToken.createEmptyVault(vaultType: Type<@FlowToken.Vault>())
+        self.account.storage.save(<- vault, to: self.VaultStoragePath)
+
+        let vaultCap = self.account.capabilities.storage.issue<&{FungibleToken.Receiver}>(self.VaultStoragePath)
+        self.account.capabilities.publish(vaultCap, at: self.VaultPublicPath)
+
+        log("✅ FlowJukeBox initialized successfully.")
     }
 }

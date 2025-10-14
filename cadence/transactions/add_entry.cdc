@@ -1,30 +1,28 @@
 import "FlowJukeBox"
-/// Adds or increases a backing for a value (song / URL) in a given jukebox NFT
-transaction(
-    nftID: UInt64,
-    value: String,
-    backing: UFix64,
-    duration: UFix64
-) {
-    prepare(signer: auth(BorrowValue) &Account) {
-        let collectionRef = signer.storage.borrow<&FlowJukeBox.Collection>(
-            from: /storage/FlowJukeBoxCollection
-        ) ?? panic("FlowJukeBox.Collection not found in signer storage")
+import "FlowToken" 
+import "FungibleToken"  
 
-        let nftRef = collectionRef.borrowJukeboxNFT(nftID)
-            ?? panic("No FlowJukeBox NFT with that ID found")
+transaction(nftID: UInt64, value: String, duration: UFix64, amount: UFix64) {
+    prepare(signer: auth(BorrowValue, FungibleToken.Withdraw) &Account) {
+        // Borrow a FlowToken Vault with withdraw entitlement
+        let vaultRef = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
+            from: /storage/flowTokenVault
+        ) ?? panic("Missing FlowToken vault in signer storage")
 
-        let timestamp = getCurrentBlock().timestamp
+        // Withdraw FLOW payment
+        let payment <- vaultRef.withdraw(amount: amount)
 
-        nftRef.addEntry(
+        // Deposit to the Jukebox contract and add entry
+        FlowJukeBox.depositBacking(
+            nftID: nftID,
+            from: signer.address,
             value: value,
-            backing: backing,
             duration: duration,
-            timestamp: timestamp
+            payment: <- payment
         )
     }
 
     execute {
-        log("✅ Entry added/updated for FlowJukeBox NFT ".concat(nftID.toString()))
+        log("✅ Entry added to Jukebox ".concat(nftID.toString()))
     }
 }
