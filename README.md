@@ -4,8 +4,8 @@
 
 TESTNET:
 ```
-$SIGNER = "tn1"
-$CONTRACTADDR = "0x1a892184172f773e"
+$SIGNER = "tn3"
+$CONTRACTADDR = "0xc2517eecc593aabb"
 $FLOWNETWORK = "testnet"
 ```
 
@@ -30,8 +30,14 @@ Update contract:
 Create a jukebox:
 `flow transactions send .\cadence\transactions\create_jukebox.cdc ABACAC 7200.0 --signer $SIGNER -n $FLOWNETWORK `
 
+Start the a song and run autoplay to play next or end queue with payout:
+`flow transactions send .\cadence\transactions\play_next_or_payout.cdc 1 -n $FLOWNETWORK --signer $SIGNER`
+
 Add a song:
 `flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/blabla" "SongABCD" 10.0 30.0 --signer $SIGNER -n $FLOWNETWORK`
+
+Get single jukebox details:
+`flow scripts execute .\cadence\scripts\get_jukebox_info.cdc 1 -n $FLOWNETWORK`
 
 See the queue:
 `flow scripts execute .\cadence\scripts\get_queue.cdc $CONTRACTADDR 1 -n $FLOWNETWORK`
@@ -45,11 +51,6 @@ List all jukeboxes:
 List users jukeboxes:
 `flow scripts execute .\cadence\scripts\get_users_jukeboxes.cdc $CONTRACTADDR -n $FLOWNETWORK`
 
-Get single jukebox details:
-`flow scripts execute .\cadence\scripts\get_jukebox_info.cdc 1 -n $FLOWNETWORK`
-
 Payout:
 `flow transactions send .\cadence\transactions\payout.cdc 1 -n $FLOWNETWORK --signer $SIGNER`
 
-Play next song or end queue with payout:
-`flow transactions send .\cadence\transactions\play_next_or_payout.cdc 1 -n $FLOWNETWORK --signer $SIGNER`

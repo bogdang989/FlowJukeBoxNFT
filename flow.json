@@ -11,6 +11,18 @@
 			"aliases": {
 				"testing": "0000000000000007"
 			}
+		},
+		"FlowTransactionScheduler": {
+			"source": "cadence/contracts/FlowTransactionScheduler.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
+		"FlowTransactionSchedulerUtils": {
+			"source": "cadence/contracts/FlowTransactionSchedulerUtils.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
 		}
 	},
 	"dependencies": {
@@ -258,16 +270,25 @@
 				"type": "file",
 				"location": "tn2.pkey"
 			}
+		},
+		"tn3": {
+			"address": "c2517eecc593aabb",
+			"key": {
+				"type": "file",
+				"location": "tn3.pkey"
+			}
 		}
 	},
 	"deployments": {
 		"emulator": {
 			"emulator-account": [
-				"FlowJukeBox"
+				"FlowJukeBox",
+				"FlowTransactionScheduler",
+				"FlowTransactionSchedulerUtils"
 			]
 		},
 		"testnet": {
-			"tn1": [
+			"tn3": [
 				"FlowJukeBox"
 			]
 		}
