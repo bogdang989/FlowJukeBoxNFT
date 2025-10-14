@@ -18,13 +18,21 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     // Queue Entry
     // -------------------------
     access(all) struct QueueEntry {
-        access(all) let value: String
+        access(all) let value: String          // e.g. YouTube URL
+        access(all) let displayName: String    // e.g. “Drake – God's Plan”
         access(all) var totalBacking: UFix64
         access(all) var latestBacking: UFix64
         access(all) let duration: UFix64
 
-        init(value: String, totalBacking: UFix64, latestBacking: UFix64, duration: UFix64) {
+        init(
+            value: String,
+            displayName: String,
+            totalBacking: UFix64,
+            latestBacking: UFix64,
+            duration: UFix64
+        ) {
             self.value = value
+            self.displayName = displayName
             self.totalBacking = totalBacking
             self.latestBacking = latestBacking
             self.duration = duration
@@ -69,6 +77,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         // Internal entry logic
         access(contract) fun _addEntryInternal(
             value: String,
+            displayName: String,
             backing: UFix64,
             duration: UFix64,
             timestamp: UFix64
@@ -87,6 +96,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             if !found {
                 let newEntry = QueueEntry(
                     value: value,
+                    displayName: displayName,
                     totalBacking: backing,
                     latestBacking: timestamp,
                     duration: duration
@@ -117,13 +127,11 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             }
 
             let next = self.queueEntries.remove(at: topIndex)
-            self.nowPlaying = next.value
-            return { "value": next.value, "duration": next.duration }
+            self.nowPlaying = next.displayName
+            return { "value": next.value, "displayName": next.displayName, "duration": next.duration }
         }
 
-        // -------------------------
         // Metadata Views
-        // -------------------------
         access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
             return <- FlowJukeBox.createEmptyCollection(nftType: Type<@FlowJukeBox.NFT>())
         }
@@ -209,24 +217,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     }
 
     // -------------------------
-    // Admin (legacy)
-    // -------------------------
-    access(all) resource Admin {
-        access(all) fun mintJukeboxSession(sessionOwner: Address, queueIdentifier: String): @FlowJukeBox.NFT {
-            let id = FlowJukeBox.totalSupply + 1
-            FlowJukeBox.totalSupply = id
-            let nft <- create FlowJukeBox.NFT(
-                id: id,
-                sessionOwner: sessionOwner,
-                queueIdentifier: queueIdentifier,
-                queueDuration: 0.0
-            )
-            return <- nft
-        }
-    }
-
-    // -------------------------
-    // Public Mint (10 FLOW fee)
+    // Public Mint
     // -------------------------
     access(all) fun createJukeboxSession(
         sessionOwner: Address,
@@ -248,54 +239,55 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         ) ?? panic("Contract collection not found")
 
         col.deposit(token: <- nft)
-
         log("✅ Public mint: FlowJukeBox #".concat(id.toString()))
     }
 
     // -------------------------
-    // Public depositBacking — anyone can add entries to any NFT
+    // Public depositBacking
     // -------------------------
     access(all) fun depositBacking(
         nftID: UInt64,
         from: Address,
         value: String,
+        displayName: String,
         duration: UFix64,
         payment: @{FungibleToken.Vault}
     ) {
-        // Deposit FLOW to contract’s FlowToken vault
         let receiver = self.account.capabilities.borrow<&{FungibleToken.Receiver}>(
             /public/flowTokenReceiver
-        ) ?? panic("FlowToken receiver not found in contract account")
+        ) ?? panic("FlowToken receiver not found")
 
         let amount = payment.balance
         receiver.deposit(from: <- payment)
 
-        // Borrow NFT reference
         let collectionRef = self.account.storage.borrow<&FlowJukeBox.Collection>(
             from: self.CollectionStoragePath
-        ) ?? panic("FlowJukeBox.Collection not found in contract storage")
+        ) ?? panic("FlowJukeBox.Collection not found")
 
         let nftRef = collectionRef.borrowJukeboxNFT(nftID)
-            ?? panic("NFT with given ID not found")
+            ?? panic("NFT not found")
 
-        // Update NFT’s queue
         let now = getCurrentBlock().timestamp
         nftRef._addEntryInternal(
             value: value,
+            displayName: displayName,
             backing: amount,
             duration: duration,
             timestamp: now
         )
 
-        log("💰 Backing of ".concat(amount.toString())
-            .concat(" FLOW added for NFT #")
-            .concat(nftID.toString())
-            .concat(" by ").concat(from.toString()))
+        log("💰 ".concat(amount.toString()).concat(" FLOW added to #").concat(nftID.toString()))
     }
 
     // -------------------------
-    // Contract Views
+    // Views & Init
     // -------------------------
+    access(all) var totalSupply: UInt64
+
+    access(all) fun createEmptyCollection(nftType: Type): @{NonFungibleToken.Collection} {
+        return <- create FlowJukeBox.Collection()
+    }
+
     access(all) view fun getContractViews(resourceType: Type?): [Type] {
         return [Type<MetadataViews.NFTCollectionData>(), Type<MetadataViews.NFTCollectionDisplay>()]
     }
@@ -329,24 +321,12 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         return nil
     }
 
-    // -------------------------
-    // State & Initialization
-    // -------------------------
-    access(all) var totalSupply: UInt64
-
-    access(all) fun createEmptyCollection(nftType: Type): @{NonFungibleToken.Collection} {
-        return <- create FlowJukeBox.Collection()
-    }
-
     init() {
         self.CollectionStoragePath = /storage/FlowJukeBoxCollection
         self.CollectionPublicPath  = /public/FlowJukeBoxCollection
         self.AdminStoragePath      = /storage/FlowJukeBoxAdmin
         self.contractAddress       = self.account.address
         self.totalSupply = 0
-
-        let admin <- create Admin()
-        self.account.storage.save(<- admin, to: self.AdminStoragePath)
 
         let col <- create FlowJukeBox.Collection()
         self.account.storage.save(<- col, to: self.CollectionStoragePath)

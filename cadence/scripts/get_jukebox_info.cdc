@@ -1,21 +1,21 @@
 import "FlowJukeBox"
 
 access(all) fun main(nftID: UInt64): {String: AnyStruct} {
-    let collection = getAccount(FlowJukeBox.contractAddress)
+    let col = getAccount(FlowJukeBox.contractAddress)
         .capabilities
         .borrow<&FlowJukeBox.Collection>(FlowJukeBox.CollectionPublicPath)
-        ?? panic("Public FlowJukeBox.Collection not found")
+        ?? panic("Public collection not found")
 
-    let nft = collection.borrowJukeboxNFT(nftID)
+    let nft = col.borrowJukeboxNFT(nftID)
         ?? panic("NFT not found")
 
-    // Build entries locally first
     var entries: [{String: AnyStruct}] = []
     var i = 0
     while i < nft.queueEntries.length {
         let e = nft.queueEntries[i]
         entries.append({
             "value": e.value,
+            "displayName": e.displayName,
             "duration": e.duration,
             "totalBacking": e.totalBacking,
             "latestBacking": e.latestBacking
@@ -23,7 +23,6 @@ access(all) fun main(nftID: UInt64): {String: AnyStruct} {
         i = i + 1
     }
 
-    // Return composed NFT details
     return {
         "id": nft.id,
         "queueIdentifier": nft.queueIdentifier,
