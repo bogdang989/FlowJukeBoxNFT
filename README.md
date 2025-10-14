@@ -50,3 +50,6 @@ Get single jukebox details:
 
 Payout:
 `flow transactions send .\cadence\transactions\payout.cdc 1 -n $FLOWNETWORK --signer $SIGNER`
+
+Play next song or end queue with payout:
+`flow transactions send .\cadence\transactions\play_next_or_payout.cdc 1 -n $FLOWNETWORK --signer $SIGNER`
