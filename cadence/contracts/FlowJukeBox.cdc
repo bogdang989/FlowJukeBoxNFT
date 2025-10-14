@@ -238,7 +238,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
                     return MetadataViews.Display(
                         name: "🎵 Jukebox Session",
                         description: desc,
-                        thumbnail: MetadataViews.HTTPFile(url: "https://mvponflow.cc/favicon.png")
+                        thumbnail: MetadataViews.HTTPFile(url: "https://raw.githubusercontent.com/bogdang989/FlowJukeBoxNFT/refs/heads/main/FlowJukeboxLogo.png")
                     )
                 case Type<MetadataViews.NFTCollectionData>():
                     return FlowJukeBox.resolveContractView(
@@ -540,13 +540,13 @@ access(all) contract FlowJukeBox: NonFungibleToken {
                 )
             case Type<MetadataViews.NFTCollectionDisplay>():
                 let media = MetadataViews.Media(
-                    file: MetadataViews.HTTPFile(url: "https://mvponflow.cc/favicon.png"),
+                    file: MetadataViews.HTTPFile(url: "https://raw.githubusercontent.com/bogdang989/FlowJukeBoxNFT/refs/heads/main/FlowJukeboxLogo.png"),
                     mediaType: "image/png"
                 )
                 return MetadataViews.NFTCollectionDisplay(
                     name: "Flow Jukebox Sessions",
                     description: "Each NFT represents a live jukebox session queue.",
-                    externalURL: MetadataViews.ExternalURL("https://mvponflow.cc/"),
+                    externalURL: MetadataViews.ExternalURL("https://raw.githubusercontent.com/bogdang989/FlowJukeBoxNFT/refs/heads/main/FlowJukeboxLogo.png"),
                     squareImage: media,
                     bannerImage: media,
                     socials: {}
