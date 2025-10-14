@@ -5,6 +5,9 @@ import "MetadataViews"
 
 access(all) contract FlowJukeBox: NonFungibleToken {
 
+    // -------------------------
+    // Standard Paths
+    // -------------------------
     access(all) let CollectionStoragePath: StoragePath
     access(all) let CollectionPublicPath: PublicPath
     access(all) let AdminStoragePath: StoragePath
@@ -13,7 +16,6 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     // Queue Entry
     // -------------------------
     access(all) struct QueueEntry {
-        // readable everywhere
         access(all) let value: String
         access(all) var totalBacking: UFix64
         access(all) var latestBacking: UFix64
@@ -26,7 +28,6 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             self.duration = duration
         }
 
-        // only callable from within contract resources
         access(contract) fun updateBacking(extraBacking: UFix64, newTimestamp: UFix64) {
             self.totalBacking = self.totalBacking + extraBacking
             self.latestBacking = newTimestamp
@@ -56,6 +57,9 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             self.nowPlaying = ""
         }
 
+        // ------------------------------------------------
+        // Add new entry or update existing one
+        // ------------------------------------------------
         access(all) fun addEntry(
             value: String,
             backing: UFix64,
@@ -85,9 +89,45 @@ access(all) contract FlowJukeBox: NonFungibleToken {
 
             self.totalBacking = self.totalBacking + backing
             self.totalDuration = self.totalDuration + duration
+
             log("🎵 Added entry to queue ".concat(self.queueIdentifier))
         }
 
+        // ------------------------------------------------
+        // Play Next Song (returns top-backed entry and removes it)
+        // ------------------------------------------------
+        access(all) fun playNext(): {String: AnyStruct} {
+            if self.queueEntries.length == 0 {
+                panic("Queue is empty — nothing to play.")
+            }
+
+            var topIndex = 0
+            var i = 1
+            while i < self.queueEntries.length {
+                let current = self.queueEntries[i]
+                let top = self.queueEntries[topIndex]
+                if current.totalBacking > top.totalBacking ||
+                   (current.totalBacking == top.totalBacking && current.latestBacking < top.latestBacking) {
+                    topIndex = i
+                }
+                i = i + 1
+            }
+
+            let next = self.queueEntries.remove(at: topIndex)
+            self.nowPlaying = next.value
+
+            log("▶️ Now playing ".concat(next.value)
+                .concat(" (duration ").concat(next.duration.toString()).concat("s)"))
+
+            return {
+                "value": next.value,
+                "duration": next.duration
+            }
+        }
+
+        // ------------------------------------------------
+        // Required NFT Standard + Metadata Views
+        // ------------------------------------------------
         access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
             return <- FlowJukeBox.createEmptyCollection(nftType: Type<@FlowJukeBox.NFT>())
         }

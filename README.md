@@ -20,5 +20,14 @@ List accounts:
 Add a deployment:
 `flow config add deployment`
 
-Create a jukebox (ADMIN):
+Create a jukebox:
 `flow transactions send .\cadence\transactions\create_jukebox.cdc ABACAC --signer $SIGNER -n $FLOWNETWORK`
+
+Add a song:
+`flow transactions send .\cadence\transactions\add_entry.cdc 1 "SongABCD" 1.0 30.0 --signer $SIGNER -n $FLOWNETWORK`
+
+See the queue:
+`flow scripts execute .\cadence\scripts\get_queue.cdc $CONTRACTADDR 1 -n $FLOWNETWORK`
+
+Play next:
+`flow transactions send .\cadence\transactions\play_next.cdc 1 -n $FLOWNETWORK --signer $SIGNER`
