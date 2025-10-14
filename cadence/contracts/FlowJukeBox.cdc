@@ -14,15 +14,15 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     access(all) let AdminStoragePath: StoragePath
     access(all) let contractAddress: Address
 
-    // Payout % (tunable later)
+    // Tunable payout % (default 80%)
     access(all) var payoutPercentage: UFix64
 
     // -------------------------
     // Queue Entry
     // -------------------------
     access(all) struct QueueEntry {
-        access(all) let value: String
-        access(all) let displayName: String
+        access(all) let value: String          // e.g. YouTube URL
+        access(all) let displayName: String    // e.g. “Drake – God's Plan”
         access(all) var totalBacking: UFix64
         access(all) var latestBacking: UFix64
         access(all) let duration: UFix64
@@ -55,6 +55,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         access(all) let sessionOwner: Address
         access(all) let queueIdentifier: String
         access(all) let queueDuration: UFix64
+        access(all) let createdAt: UFix64
 
         access(all) var queueEntries: [QueueEntry]
         access(all) var totalDuration: UFix64
@@ -72,6 +73,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             self.sessionOwner = sessionOwner
             self.queueIdentifier = queueIdentifier
             self.queueDuration = queueDuration
+            self.createdAt = getCurrentBlock().timestamp
             self.queueEntries = []
             self.totalDuration = 0.0
             self.totalBacking = 0.0
@@ -79,11 +81,9 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             self.hasBeenPaidOut = false
         }
 
-        access(contract) fun markAsPaid() {
-            self.hasBeenPaidOut = true
-        }
+        access(contract) fun markAsPaid() { self.hasBeenPaidOut = true }
 
-        // Internal entry logic
+        // Internal addEntry logic
         access(contract) fun _addEntryInternal(
             value: String,
             displayName: String,
@@ -117,7 +117,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             self.totalDuration = self.totalDuration + duration
         }
 
-        // Play next entry
+        // Pure "pick next" (no payout/burn here!)
         access(all) fun playNext(): {String: AnyStruct} {
             if self.queueEntries.length == 0 {
                 panic("Queue empty.")
@@ -223,6 +223,12 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             if any == nil { return nil }
             return any as! &FlowJukeBox.NFT
         }
+
+        access(contract) fun removeAndDestroy(id: UInt64) {
+            let tok <- self.ownedNFTs.remove(key: id)
+                ?? panic("NFT not found for burn")
+            destroy tok
+        }
     }
 
     // -------------------------
@@ -289,9 +295,9 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     }
 
     // -------------------------
-    // Payout Function
+    // Contract helper: payout + burn (internal)
     // -------------------------
-    access(all) fun payout(nftID: UInt64) {
+    access(contract) fun _payoutAndBurn(nftID: UInt64) {
         let col = self.account.storage.borrow<&FlowJukeBox.Collection>(
             from: self.CollectionStoragePath
         ) ?? panic("FlowJukeBox.Collection not found")
@@ -299,29 +305,57 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         let nftRef = col.borrowJukeboxNFT(nftID)
             ?? panic("NFT not found")
 
-        if nftRef.hasBeenPaidOut {
-            panic("This NFT has already been paid out")
+        // Copy data we need BEFORE destroying/burning
+        let owner: Address = nftRef.sessionOwner
+        let amountToPay: UFix64 = nftRef.totalBacking * self.payoutPercentage
+
+        if !nftRef.hasBeenPaidOut && amountToPay > 0.0 {
+            let vaultRef = self.account.storage.borrow<
+                auth(FungibleToken.Withdraw) &FlowToken.Vault
+            >(from: /storage/flowTokenVault)
+                ?? panic("FlowToken vault not found in contract storage")
+
+            let vault <- vaultRef.withdraw(amount: amountToPay)
+
+            let receiverCap = getAccount(owner)
+                .capabilities
+                .borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
+                ?? panic("Receiver capability not found")
+
+            receiverCap.deposit(from: <- vault)
+            nftRef.markAsPaid()
         }
 
-        let amountToPay = nftRef.totalBacking * self.payoutPercentage
+        // Burn AFTER payout
+        col.removeAndDestroy(id: nftID)
 
-        let vaultRef = self.account.storage.borrow<
-            auth(FungibleToken.Withdraw) &FlowToken.Vault
-        >(from: /storage/flowTokenVault)
-            ?? panic("FlowToken vault not found in contract storage")
+        log("💸 Payout ".concat(amountToPay.toString())
+            .concat(" FLOW to ").concat(owner.toString())
+            .concat(" and burned NFT #").concat(nftID.toString()))
+    }
 
-        let vault <- vaultRef.withdraw(amount: amountToPay)
+    // -------------------------
+    // Public: playNext OR payout+burn if expired
+    // -------------------------
+    access(all) fun playNextOrPayout(nftID: UInt64): {String: AnyStruct}? {
+        let col = self.account.storage.borrow<&FlowJukeBox.Collection>(
+            from: self.CollectionStoragePath
+        ) ?? panic("FlowJukeBox.Collection not found")
 
-        let receiverCap = getAccount(nftRef.sessionOwner)
-            .capabilities
-            .borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
-            ?? panic("Receiver capability not found")
+        let nftRef = col.borrowJukeboxNFT(nftID)
+            ?? panic("NFT not found")
 
-        receiverCap.deposit(from: <- vault)
+        let now = getCurrentBlock().timestamp
+        let expiresAt = nftRef.createdAt + nftRef.queueDuration
 
-        nftRef.markAsPaid()
+        if now > expiresAt {
+            self._payoutAndBurn(nftID: nftID)
+            return nil
+        }
 
-        log("💸 Paid out ".concat(amountToPay.toString()).concat(" FLOW to ").concat(nftRef.sessionOwner.toString()))
+        // return next play info
+        let info = nftRef.playNext()
+        return info
     }
 
     // -------------------------
