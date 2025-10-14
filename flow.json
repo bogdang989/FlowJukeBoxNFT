@@ -240,11 +240,30 @@
 				"type": "file",
 				"location": "emulator-account.pkey"
 			}
+		},
+		"tn1": {
+			"address": "1a892184172f773e",
+			"key": {
+				"type": "file",
+				"location": "tn1.pkey"
+			}
+		},
+		"tn2": {
+			"address": "11a3131ddbaa0917",
+			"key": {
+				"type": "file",
+				"location": "tn2.pkey"
+			}
 		}
 	},
 	"deployments": {
 		"emulator": {
 			"emulator-account": [
+				"FlowJukeBox"
+			]
+		},
+		"testnet": {
+			"tn1": [
 				"FlowJukeBox"
 			]
 		}
