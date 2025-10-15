@@ -1,11 +1,34 @@
-## Create flow jukebox
+# Flow jukebox
 
-### Set variables for later
+Flow jukebox is better than any other jukebox, because it works with $FLOW token. 
+<p align="center">
+  <img src="./FlowJukeboxLogo.png" alt="Flow Jukebox Logo" width="300"/>
+</p>
+
+## How it works
+
+Jukebox sessions:
+- Creating a jukebox - Each jukebox session is an NFT that can be minted by anyone, after paying the minting fee. The NFT lives in the contract wallet.
+- Adding songs - Anyone can add songs to a jukebox session, by providing the song info and arbitrary amount of $FLOW token to rank it higher in the queue. More $FLOW backing a song, the earlier the song comes into the queue
+- Payout - Each jukebox has limited lifetime. After the jukebox lifetime expires, percentage of accumulated fees for adding songs to the jukebox is paid out to the wallet that created the jukebox session.
+- Play_song_or_payout - Contract method, when called checks if session lifetime expired. If true, handles payout and terminates the session, else picks the next song from the queue and plays it. 
+- NFT metadata - NFT stores the queue, as well as info on what is now playing and when it started playing.
+- Admin commands - Manually play any song from the queue or perform early payout and termination if it is your jukebox.
+
+Fully automated jukebox -  using the power of Forte and Scheduled transactions:
+1. Jukebox owner creates the jukebox, which mints the NFT and schedules the first `play_song_or_payout` transaction.
+1. `play_song_or_payout` transaction plays the next song from the queue. It also reads the song duration and schedules the next `play_song_or_payout` for once the current song ends.
+1. This is repeated for every song from the queue until flow jukebox session is expired. If session expired, `play_song_or_payout` does not play more songs, but handles payout and destroys the NFT, thus terminating the chain of scheduled transactions.
+
+## Dev Commands
+
+### Setup
+Set variables:  
 
 TESTNET:
 ```
 $SIGNER = "FlowJukeboxDev1"
-$CONTRACTADDR = "0x0x2636c731d469aa64"
+$CONTRACTADDR = "0x2636c731d469aa64"
 $FLOWNETWORK = "testnet"
 ```
 
@@ -15,8 +38,6 @@ $SIGNER = "emulator-account"
 $CONTRACTADDR = "0xf8d6e0586b0a20c7"
 $FLOWNETWORK = "emulator"
 ```
-
-### Commands
 List accounts:
 `flow accounts list`
 
@@ -26,31 +47,49 @@ Add a deployment:
 Update contract:
 `flow project deploy --network $FLOWNETWORK --update `
 
+### Contract commands
 
 Create a jukebox:
-`flow transactions send .\cadence\transactions\create_jukebox.cdc ABACAC 7200.0 --signer $SIGNER -n $FLOWNETWORK `
+```
+flow transactions send .\cadence\transactions\create_jukebox.cdc ABACAC 7200.0 --signer $SIGNER -n $FLOWNETWORK
+```
 
-Start the a song and run autoplay to play next or end queue with payout:
-`flow transactions send .\cadence\transactions\play_next_or_payout.cdc 1 -n $FLOWNETWORK --signer $SIGNER`
+Start the next song and run autoplay to play next or end queue with payout:
+```
+flow transactions send .\cadence\transactions\play_next_or_payout.cdc 1 -n $FLOWNETWORK --signer $SIGNER
+```
 
 Add a song:
-`flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/blabla" "SongABCD" 10.0 30.0 --signer $SIGNER -n $FLOWNETWORK`
+```
+flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/blabla" "SongABCD" 10.0 30.0 --signer $SIGNER -n $FLOWNETWORK
+```
 
 Get single jukebox details:
-`flow scripts execute .\cadence\scripts\get_jukebox_info.cdc 1 -n $FLOWNETWORK`
+```
+flow scripts execute .\cadence\scripts\get_jukebox_info.cdc 1 -n $FLOWNETWORK
+```
 
-See the queue:
-`flow scripts execute .\cadence\scripts\get_queue.cdc $CONTRACTADDR 1 -n $FLOWNETWORK`
+See the queue for a specific jukebox:
+```
+flow scripts execute .\cadence\scripts\get_queue.cdc $CONTRACTADDR 1 -n $FLOWNETWORK
+```
 
 Play next (Admin):
-`flow transactions send .\cadence\transactions\play_next.cdc 1 -n $FLOWNETWORK --signer $SIGNER`
+```
+flow transactions send .\cadence\transactions\play_next.cdc 1 -n $FLOWNETWORK --signer $SIGNER
+```
 
 List all jukeboxes:
-`flow scripts execute .\cadence\scripts\list_jukeboxes.cdc -n $FLOWNETWORK`
+```
+flow scripts execute .\cadence\scripts\list_jukeboxes.cdc -n $FLOWNETWORK
+```
 
 List users jukeboxes:
-`flow scripts execute .\cadence\scripts\get_users_jukeboxes.cdc $CONTRACTADDR -n $FLOWNETWORK`
+```
+flow scripts execute .\cadence\scripts\get_users_jukeboxes.cdc $CONTRACTADDR -n $FLOWNETWORK
+```
 
 Payout:
-`flow transactions send .\cadence\transactions\payout.cdc 1 -n $FLOWNETWORK --signer $SIGNER`
-
+```
+flow transactions send .\cadence\transactions\payout.cdc 1 -n $FLOWNETWORK --signer $SIGNER
+```
