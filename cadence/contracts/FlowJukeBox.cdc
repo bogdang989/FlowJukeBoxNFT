@@ -23,6 +23,9 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     access(all) var payoutPercentage: UFix64
     access(all) let defaultTrack: {String: AnyStruct}
     access(all) var totalSupply: UInt64
+    access(all) let pricePerHour: UFix64
+    access(all) let TreasuryStoragePath: StoragePath
+
 
     // Duration bounds
     access(all) let minSongDuration: UFix64
@@ -335,18 +338,60 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     }
     access(all) fun createPlayHandler(): @PlayHandler { return <- create PlayHandler() }
 
+    access(self) fun ensureTreasury() {
+        if self.account.storage.borrow<&FlowToken.Vault>(from: self.TreasuryStoragePath) == nil {
+            self.account.storage.save(
+                <- FlowToken.createEmptyVault(vaultType: Type<@FlowToken.Vault>()),
+                to: self.TreasuryStoragePath
+            )
+        }
+    }
     // ────────────────────────────────────────────────
     // Mint session
     // ────────────────────────────────────────────────
-    access(all) fun createJukeboxSession(sessionOwner: Address, queueIdentifier: String, queueDuration: UFix64) {
-        let id = FlowJukeBox.totalSupply + 1
-        FlowJukeBox.totalSupply = id
-        let nft <- create FlowJukeBox.NFT(id: id, sessionOwner: sessionOwner, queueIdentifier: queueIdentifier, queueDuration: queueDuration)
-        let col = FlowJukeBox.account.storage.borrow<&FlowJukeBox.Collection>(from: FlowJukeBox.CollectionStoragePath)
-            ?? panic("Contract collection not found")
+    access(all) fun createJukeboxSession(
+        sessionOwner: Address,
+        queueIdentifier: String,
+        queueDuration: UFix64,
+        payerVault: auth(FungibleToken.Withdraw) &FlowToken.Vault
+    ): UInt64 {
+        pre {
+            queueDuration % 3600.0 == 0.0:
+                "Queue duration must be a multiple of 3600 seconds (1 hour)"
+        }
+
+        let hours = queueDuration / 3600.0
+        let mintPrice = hours * self.pricePerHour
+
+        // Take payment
+        let payment <- payerVault.withdraw(amount: mintPrice)
+        self.ensureTreasury()
+        let vault = self.account.storage.borrow<&FlowToken.Vault>(
+            from: self.TreasuryStoragePath
+        ) ?? panic("Contract Flow vault missing after ensureTreasury")
+        vault.deposit(from: <- payment)
+
+        // Mint NFT
+        let id = self.totalSupply + 1
+        self.totalSupply = id
+
+        let nft <- create FlowJukeBox.NFT(
+            id: id,
+            sessionOwner: sessionOwner,
+            queueIdentifier: queueIdentifier,
+            queueDuration: queueDuration
+        )
+
+        let col = self.account.storage.borrow<&FlowJukeBox.Collection>(
+            from: self.CollectionStoragePath
+        ) ?? panic("Contract collection not found")
         col.deposit(token: <- nft)
-        log("✅ Public mint: FlowJukeBox #".concat(id.toString()))
+
+        log("✅ Minted FlowJukeBox #".concat(id.toString())
+            .concat(" for ").concat(mintPrice.toString()).concat(" FLOW"))
+        return id
     }
+
     //
     // ────────────────────────────────────────────────
     // Scheduler helper
@@ -527,12 +572,14 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         self.HandlerPublicPath     = /public/FlowJukeBoxPlayHandler
         self.contractAddress       = self.account.address
         self.totalSupply = 0
-        self.payoutPercentage = 0.80
-        self.minSongDuration = 15.0
-        self.maxSongDuration = 300.0
+        self.payoutPercentage = 0.80 // 80% to session owner
+        self.minSongDuration = 15.0 // seconds
+        self.maxSongDuration = 300.0 // seconds
+        self.TreasuryStoragePath   = /storage/FlowJukeBoxTreasury
+        self.pricePerHour = 5.0 // 5 FLOW per hour of queue time
 
         self.defaultTrack = {
-            "value": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "value": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", // Never
             "displayName": "Default Track",
             "duration": 180.0
         }
@@ -541,7 +588,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         self.account.storage.save(<- col, to: self.CollectionStoragePath)
         let cap = self.account.capabilities.storage.issue<&FlowJukeBox.Collection>(self.CollectionStoragePath)
         self.account.capabilities.publish(cap, at: self.CollectionPublicPath)
-
+        self.ensureTreasury()
         log("✅ FlowJukeBox deployed successfully with automatic scheduling.")
     }
 }

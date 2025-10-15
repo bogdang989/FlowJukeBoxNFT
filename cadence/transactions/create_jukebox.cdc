@@ -5,32 +5,26 @@ import "FungibleToken"
 // Mints a new Jukebox NFT (10 FLOW fee handled here)
 transaction(queueIdentifier: String, queueDuration: UFix64) {
 
-    prepare(signer: auth(BorrowValue, FungibleToken.Withdraw) &Account) {
-        // Withdraw 10 FLOW from signer
-        let vault = signer.storage.borrow<
-            auth(FungibleToken.Withdraw) &FlowToken.Vault
-        >(from: /storage/flowTokenVault)
-            ?? panic("Missing FlowToken vault in signer storage")
+    // Authorized reference so we can withdraw FLOW
+    let payerVault: auth(FungibleToken.Withdraw) &FlowToken.Vault
+    // Capture recipient (the signer) during prepare
+    let recipient: Address
 
-        let payment <- vault.withdraw(amount: 10.0)
+    prepare(signer: auth(BorrowValue) &Account) {
+        self.payerVault = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
+            from: /storage/flowTokenVault
+        ) ?? panic("Missing FlowToken vault at /storage/flowTokenVault")
 
-        // Deposit directly into contract’s FlowToken receiver
-        let receiver = getAccount(FlowJukeBox.contractAddress)
-            .capabilities
-            .borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
-            ?? panic("FlowJukeBox receiver not found")
-
-        receiver.deposit(from: <- payment)
-
-        // Mint new NFT (no payment param)
-        FlowJukeBox.createJukeboxSession(
-            sessionOwner: signer.address,
-            queueIdentifier: queueIdentifier,
-            queueDuration: queueDuration
-        )
+        self.recipient = signer.address
     }
 
     execute {
+        FlowJukeBox.createJukeboxSession(
+            sessionOwner: self.recipient,
+            queueIdentifier: queueIdentifier,
+            queueDuration: queueDuration,
+            payerVault: self.payerVault
+        )
         log("✅ Created FlowJukeBox session ".concat(queueIdentifier))
     }
 }
