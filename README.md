@@ -45,9 +45,24 @@ Add a deployment:
 `flow config add deployment`
 
 Update contract:
-`flow project deploy --network $FLOWNETWORK --update `
+```
+flow project deploy --network $FLOWNETWORK --update
+```
 
 ### Contract commands
+
+Create a jukebox with songs and start
+```
+flow transactions send .\cadence\transactions\create_jukebox.cdc ABACAC 7200.0 --signer $SIGNER -n $FLOWNETWORK
+flow transactions send .\cadence\transactions\play_next_or_payout.cdc 1 -n $FLOWNETWORK --signer $SIGNER
+flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/SongABCDE" "SongABCDE" 30.0 30.0 --signer $SIGNER -n $FLOWNETWORK
+flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/SongABCDEF" "SongABCDEF" 30.0 20.0 --signer $SIGNER -n $FLOWNETWORK
+flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/SongABCDEFG" "SongABCDEFG" 60.0 10.0 --signer $SIGNER -n $FLOWNETWORK
+flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/SongABCDEFGH" "SongABCDEFGH" 180.0 5.0 --signer $SIGNER -n $FLOWNETWORK
+flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/SongABCDEFGHI" "SongABCDEFGHI" 210.0 3.0 --signer $SIGNER -n $FLOWNETWORK
+flow scripts execute .\cadence\scripts\get_jukebox_info.cdc 1 -n $FLOWNETWORK
+flow scripts execute .\cadence\scripts\get_queue.cdc $CONTRACTADDR 1 -n $FLOWNETWORK
+```
 
 Create a jukebox:
 ```
@@ -61,7 +76,7 @@ flow transactions send .\cadence\transactions\play_next_or_payout.cdc 1 -n $FLOW
 
 Add a song:
 ```
-flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/blabla" "SongABCD" 10.0 30.0 --signer $SIGNER -n $FLOWNETWORK
+flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/blabla" "SongABCD" 20.0 30.0 --signer $SIGNER -n $FLOWNETWORK
 ```
 
 Get single jukebox details:

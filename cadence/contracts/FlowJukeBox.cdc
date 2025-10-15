@@ -8,26 +8,11 @@ import "MetadataViews"
 import "FlowTransactionScheduler"
 import "FlowTransactionSchedulerUtils"
 
-
-// ///////////////TESTNET IMPORTS/////////////////////
-// import NonFungibleToken from 0x631e88ae7f1d7c20
-// import FungibleToken from 0x9a0766d93b6608b7
-// import FlowToken from 0x7e60df042a9c0868
-// import ViewResolver from 0x631e88ae7f1d7c20
-// import MetadataViews from 0x631e88ae7f1d7c20
-
-// // Scheduled transactions
-// import FlowTransactionScheduler from 0x8c5303eaa26202d6
-// import FlowTransactionSchedulerUtils from 0x8c5303eaa26202d6
-/////////////////////////////////////////////////
-
 access(all) contract FlowJukeBox: NonFungibleToken {
 
-    //
     // ────────────────────────────────────────────────
     // Core Paths & Config
     // ────────────────────────────────────────────────
-    //
     access(all) let CollectionStoragePath: StoragePath
     access(all) let CollectionPublicPath: PublicPath
     access(all) let AdminStoragePath: StoragePath
@@ -39,11 +24,13 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     access(all) let defaultTrack: {String: AnyStruct}
     access(all) var totalSupply: UInt64
 
-    //
+    // Duration bounds
+    access(all) let minSongDuration: UFix64
+    access(all) let maxSongDuration: UFix64
+
     // ────────────────────────────────────────────────
     // Events
     // ────────────────────────────────────────────────
-    //
     access(all) event AutoPlayScheduled(
         nftId: UInt64,
         scheduledTxId: UInt64,
@@ -53,18 +40,15 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         fee: UFix64
     )
 
-    //
     // ────────────────────────────────────────────────
     // NowPlaying Struct
     // ────────────────────────────────────────────────
-    //
     access(all) struct NowPlaying {
         access(all) let value: String
         access(all) let displayName: String
         access(all) let duration: UFix64
         access(all) let startTime: UFix64
         access(all) let isDefault: Bool
-
         init(value: String, displayName: String, duration: UFix64, startTime: UFix64, isDefault: Bool) {
             self.value = value
             self.displayName = displayName
@@ -74,11 +58,9 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         }
     }
 
-    //
     // ────────────────────────────────────────────────
     // Queue Entry
     // ────────────────────────────────────────────────
-    //
     access(all) struct QueueEntry {
         access(all) let value: String
         access(all) let displayName: String
@@ -100,11 +82,9 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         }
     }
 
-    //
     // ────────────────────────────────────────────────
     // NFT Resource
     // ────────────────────────────────────────────────
-    //
     access(all) resource NFT: NonFungibleToken.NFT, ViewResolver.Resolver {
         access(all) let id: UInt64
         access(all) let sessionOwner: Address
@@ -139,6 +119,13 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             duration: UFix64,
             timestamp: UFix64
         ) {
+            pre {
+                duration >= FlowJukeBox.minSongDuration:
+                    "Track duration must be at least ".concat(FlowJukeBox.minSongDuration.toString())
+                duration <= FlowJukeBox.maxSongDuration:
+                    "Track duration must be at most ".concat(FlowJukeBox.maxSongDuration.toString())
+            }
+
             var found = false
             var i = 0
             while i < self.queueEntries.length {
@@ -149,7 +136,6 @@ access(all) contract FlowJukeBox: NonFungibleToken {
                 }
                 i = i + 1
             }
-
             if !found {
                 let newEntry = QueueEntry(
                     value: value,
@@ -160,14 +146,12 @@ access(all) contract FlowJukeBox: NonFungibleToken {
                 )
                 self.queueEntries.append(newEntry)
             }
-
             self.totalBacking = self.totalBacking + backing
             self.totalDuration = self.totalDuration + duration
         }
 
         access(all) fun playNext(): {String: AnyStruct} {
             let now = getCurrentBlock().timestamp
-
             if self.queueEntries.length == 0 {
                 let def = FlowJukeBox.NowPlaying(
                     value: FlowJukeBox.defaultTrack["value"] as! String,
@@ -208,7 +192,6 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             )
             self.nowPlaying = np
             log("▶️ Now playing: ".concat(np.displayName))
-
             return {
                 "value": np.value,
                 "displayName": np.displayName,
@@ -218,7 +201,6 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             }
         }
 
-        // required by NonFungibleToken.NFT
         access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
             return <- FlowJukeBox.createEmptyCollection(nftType: Type<@FlowJukeBox.NFT>())
         }
@@ -238,7 +220,9 @@ access(all) contract FlowJukeBox: NonFungibleToken {
                     return MetadataViews.Display(
                         name: "🎵 Jukebox Session",
                         description: desc,
-                        thumbnail: MetadataViews.HTTPFile(url: "https://raw.githubusercontent.com/bogdang989/FlowJukeBoxNFT/refs/heads/main/FlowJukeboxLogo.png")
+                        thumbnail: MetadataViews.HTTPFile(
+                            url: "https://raw.githubusercontent.com/bogdang989/FlowJukeBoxNFT/refs/heads/main/FlowJukeboxLogo.png"
+                        )
                     )
                 case Type<MetadataViews.NFTCollectionData>():
                     return FlowJukeBox.resolveContractView(
@@ -256,30 +240,21 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         }
     }
 
-    //
     // ────────────────────────────────────────────────
     // Collection Resource
     // ────────────────────────────────────────────────
-    //
     access(all) resource Collection: NonFungibleToken.Collection {
         access(all) var ownedNFTs: @{UInt64: {NonFungibleToken.NFT}}
         init() { self.ownedNFTs <- {} }
 
         access(all) view fun getIDs(): [UInt64] { return self.ownedNFTs.keys }
-
         access(all) view fun getSupportedNFTTypes(): {Type: Bool} {
             let m: {Type: Bool} = {}
             m[Type<@FlowJukeBox.NFT>()] = true
             return m
         }
-
-        access(all) view fun isSupportedNFTType(type: Type): Bool {
-            return type == Type<@FlowJukeBox.NFT>()
-        }
-
-        access(all) view fun borrowNFT(_ id: UInt64): &{NonFungibleToken.NFT}? {
-            return &self.ownedNFTs[id]
-        }
+        access(all) view fun isSupportedNFTType(type: Type): Bool { return type == Type<@FlowJukeBox.NFT>() }
+        access(all) view fun borrowNFT(_ id: UInt64): &{NonFungibleToken.NFT}? { return &self.ownedNFTs[id] }
 
         access(all) fun borrowJukeboxNFT(_ id: UInt64): &FlowJukeBox.NFT? {
             let any = &self.ownedNFTs[id] as &{NonFungibleToken.NFT}?
@@ -310,9 +285,9 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         }
     }
 
-    // -------------------------
-    // Public depositBacking (add FLOW and track to queue)
-    // -------------------------
+    // ────────────────────────────────────────────────
+    // depositBacking (with duration check)
+    // ────────────────────────────────────────────────
     access(all) fun depositBacking(
         nftID: UInt64,
         from: Address,
@@ -321,7 +296,13 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         duration: UFix64,
         payment: @{FungibleToken.Vault}
     ) {
-        // Deposit incoming FLOW to the contract vault
+        pre {
+            duration >= self.minSongDuration:
+                "Track duration must be at least ".concat(self.minSongDuration.toString())
+            duration <= self.maxSongDuration:
+                "Track duration must be at most ".concat(self.maxSongDuration.toString())
+        }
+
         let receiver = self.account.capabilities.borrow<&{FungibleToken.Receiver}>(
             /public/flowTokenReceiver
         ) ?? panic("FlowToken receiver not found")
@@ -329,7 +310,6 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         let amount = payment.balance
         receiver.deposit(from: <- payment)
 
-        // Borrow collection and target NFT
         let collectionRef = self.account.storage.borrow<&FlowJukeBox.Collection>(
             from: self.CollectionStoragePath
         ) ?? panic("FlowJukeBox.Collection not found")
@@ -338,22 +318,13 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             ?? panic("NFT not found")
 
         let now = getCurrentBlock().timestamp
-        nftRef._addEntryInternal(
-            value: value,
-            displayName: displayName,
-            backing: amount,
-            duration: duration,
-            timestamp: now
-        )
-
+        nftRef._addEntryInternal(value: value, displayName: displayName, backing: amount, duration: duration, timestamp: now)
         log("💰 ".concat(amount.toString()).concat(" FLOW added to #").concat(nftID.toString()))
     }
 
-    //
     // ────────────────────────────────────────────────
-    // Scheduled Transaction Handler
+    // PlayHandler for Scheduler
     // ────────────────────────────────────────────────
-    //
     access(all) resource PlayHandler: FlowTransactionScheduler.TransactionHandler {
         access(FlowTransactionScheduler.Execute)
         fun executeTransaction(id: UInt64, data: AnyStruct?) {
@@ -362,30 +333,17 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             FlowJukeBox.playNextOrPayout(nftID: nftId)
         }
     }
-
     access(all) fun createPlayHandler(): @PlayHandler { return <- create PlayHandler() }
-    // -------------------------
-    // Public Mint (Create a new Jukebox Session NFT)
-    // -------------------------
-    access(all) fun createJukeboxSession(
-        sessionOwner: Address,
-        queueIdentifier: String,
-        queueDuration: UFix64
-    ) {
+
+    // ────────────────────────────────────────────────
+    // Mint session
+    // ────────────────────────────────────────────────
+    access(all) fun createJukeboxSession(sessionOwner: Address, queueIdentifier: String, queueDuration: UFix64) {
         let id = FlowJukeBox.totalSupply + 1
         FlowJukeBox.totalSupply = id
-
-        let nft <- create FlowJukeBox.NFT(
-            id: id,
-            sessionOwner: sessionOwner,
-            queueIdentifier: queueIdentifier,
-            queueDuration: queueDuration
-        )
-
-        let col = FlowJukeBox.account.storage.borrow<&FlowJukeBox.Collection>(
-            from: FlowJukeBox.CollectionStoragePath
-        ) ?? panic("Contract collection not found")
-
+        let nft <- create FlowJukeBox.NFT(id: id, sessionOwner: sessionOwner, queueIdentifier: queueIdentifier, queueDuration: queueDuration)
+        let col = FlowJukeBox.account.storage.borrow<&FlowJukeBox.Collection>(from: FlowJukeBox.CollectionStoragePath)
+            ?? panic("Contract collection not found")
         col.deposit(token: <- nft)
         log("✅ Public mint: FlowJukeBox #".concat(id.toString()))
     }
@@ -570,6 +528,8 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         self.contractAddress       = self.account.address
         self.totalSupply = 0
         self.payoutPercentage = 0.80
+        self.minSongDuration = 15.0
+        self.maxSongDuration = 300.0
 
         self.defaultTrack = {
             "value": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
