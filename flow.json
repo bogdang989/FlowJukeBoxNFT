@@ -230,6 +230,13 @@
 		"testnet": "access.devnet.nodes.onflow.org:9000"
 	},
 	"accounts": {
+		"FlowJukeboxDev1": {
+			"address": "2636c731d469aa64",
+			"key": {
+				"type": "file",
+				"location": "FlowJukeboxDev1.pkey"
+			}
+		},
 		"acc1": {
 			"address": "179b6b1cb6755e31",
 			"key": "c7179e8ff2b7277794921d77f4601b44ad3a94a9deb94daca94d8864cf138548"
@@ -288,7 +295,7 @@
 			]
 		},
 		"testnet": {
-			"tn3": [
+			"FlowJukeboxDev1": [
 				"FlowJukeBox"
 			]
 		}

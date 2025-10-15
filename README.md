@@ -4,8 +4,8 @@
 
 TESTNET:
 ```
-$SIGNER = "tn3"
-$CONTRACTADDR = "0xc2517eecc593aabb"
+$SIGNER = "FlowJukeboxDev1"
+$CONTRACTADDR = "0x0x2636c731d469aa64"
 $FLOWNETWORK = "testnet"
 ```
 
