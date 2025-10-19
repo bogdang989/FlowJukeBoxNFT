@@ -237,6 +237,13 @@
 				"location": "FlowJukeboxDev1.pkey"
 			}
 		},
+		"FlowJukeboxDev2": {
+			"address": "7a017e02df4c4819",
+			"key": {
+				"type": "file",
+				"location": "FlowJukeboxDev2.pkey"
+			}
+		},
 		"acc1": {
 			"address": "179b6b1cb6755e31",
 			"key": "c7179e8ff2b7277794921d77f4601b44ad3a94a9deb94daca94d8864cf138548"
@@ -295,7 +302,7 @@
 			]
 		},
 		"testnet": {
-			"FlowJukeboxDev1": [
+			"FlowJukeboxDev2": [
 				"FlowJukeBox"
 			]
 		}

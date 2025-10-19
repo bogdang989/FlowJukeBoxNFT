@@ -1,12 +1,25 @@
-import "NonFungibleToken"
-import "FungibleToken"
-import "FlowToken"
-import "ViewResolver"
-import "MetadataViews"
+// import "NonFungibleToken"
+// import "FungibleToken"
+// import "FlowToken"
+// import "ViewResolver"
+// import "MetadataViews"
+
+// // Scheduled transactions
+// import "FlowTransactionScheduler"
+// import "FlowTransactionSchedulerUtils"
+
+
+///////////////TESTNET IMPORTS/////////////////////
+import NonFungibleToken from 0x631e88ae7f1d7c20
+import FungibleToken from 0x9a0766d93b6608b7
+import FlowToken from 0x7e60df042a9c0868
+import ViewResolver from 0x631e88ae7f1d7c20
+import MetadataViews from 0x631e88ae7f1d7c20
 
 // Scheduled transactions
-import "FlowTransactionScheduler"
-import "FlowTransactionSchedulerUtils"
+import FlowTransactionScheduler from 0x8c5303eaa26202d6
+import FlowTransactionSchedulerUtils from 0x8c5303eaa26202d6
+///////////////////////////////////////////////
 
 access(all) contract FlowJukeBox: NonFungibleToken {
 
@@ -437,7 +450,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             handlerCap: execHandlerCap,
             data: nftId,
             timestamp: executeAt,
-            priority: FlowTransactionScheduler.Priority.Medium,
+            priority: FlowTransactionScheduler.Priority.High,
             executionEffort: 1000,
             fees: <- fees
         )

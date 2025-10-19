@@ -20,15 +20,15 @@ Fully automated jukebox -  using the power of Forte and Scheduled transactions:
 1. `play_song_or_payout` transaction plays the next song from the queue. It also reads the song duration and schedules the next `play_song_or_payout` for once the current song ends.
 1. This is repeated for every song from the queue until flow jukebox session is expired. If session expired, `play_song_or_payout` does not play more songs, but handles payout and destroys the NFT, thus terminating the chain of scheduled transactions.
 
-## Dev Commands
+## Dev Commands (PowerShell)
 
 ### Setup
 Set variables:  
 
 TESTNET:
 ```
-$SIGNER = "FlowJukeboxDev1"
-$CONTRACTADDR = "0x2636c731d469aa64"
+$SIGNER = "FlowJukeboxDev2"
+$CONTRACTADDR = "0x7a017e02df4c4819"
 $FLOWNETWORK = "testnet"
 ```
 
@@ -62,6 +62,8 @@ flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/SongA
 flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/SongABCDEFGHI" "SongABCDEFGHI" 210.0 3.0 --signer $SIGNER -n $FLOWNETWORK
 flow scripts execute .\cadence\scripts\get_jukebox_info.cdc 1 -n $FLOWNETWORK
 flow scripts execute .\cadence\scripts\get_queue.cdc $CONTRACTADDR 1 -n $FLOWNETWORK
+flow scripts execute .\cadence\scripts\list_jukeboxes.cdc -n $FLOWNETWORK
+flow scripts execute .\cadence\scripts\get_users_jukeboxes.cdc $CONTRACTADDR -n $FLOWNETWORK
 ```
 
 Create a jukebox:
