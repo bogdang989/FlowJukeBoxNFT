@@ -12,6 +12,12 @@
 				"testing": "0000000000000007"
 			}
 		},
+		"FlowJukeBoxTransactionHandler": {
+			"source": "cadence/contracts/FlowJukeBoxTransactionHandler.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
 		"FlowTransactionScheduler": {
 			"source": "cadence/contracts/FlowTransactionScheduler.cdc",
 			"aliases": {
@@ -221,6 +227,18 @@
 				"mainnet": "1d7e57aa55817448",
 				"testnet": "631e88ae7f1d7c20"
 			}
+		},
+		"FlowTransactionScheduler": {
+			"source": "testnet://8c5303eaa26202d6.FlowTransactionScheduler",
+			"aliases": {
+				"testnet": "8c5303eaa26202d6"
+			}
+		},
+		"FlowTransactionSchedulerUtils": {
+			"source": "testnet://8c5303eaa26202d6.FlowTransactionSchedulerUtils",
+			"aliases": {
+				"testnet": "8c5303eaa26202d6"
+			}
 		}
 	},
 	"networks": {
@@ -242,6 +260,20 @@
 			"key": {
 				"type": "file",
 				"location": "FlowJukeboxDev2.pkey"
+			}
+		},
+		"FlowJukeboxDev3": {
+			"address": "976f3cc54aa28bb3",
+			"key": {
+				"type": "file",
+				"location": "FlowJukeboxDev3.pkey"
+			}
+		},
+		"FlowJukeboxDev4": {
+			"address": "655ce02bc25c810d",
+			"key": {
+				"type": "file",
+				"location": "FlowJukeboxDev4.pkey"
 			}
 		},
 		"acc1": {
@@ -296,14 +328,16 @@
 	"deployments": {
 		"emulator": {
 			"emulator-account": [
-				"FlowJukeBox",
 				"FlowTransactionScheduler",
-				"FlowTransactionSchedulerUtils"
+				"FlowTransactionSchedulerUtils",
+				"FlowJukeBox",
+				"FlowJukeBoxTransactionHandler"
 			]
 		},
 		"testnet": {
-			"FlowJukeboxDev2": [
-				"FlowJukeBox"
+			"FlowJukeboxDev4": [
+				"FlowJukeBox",
+				"FlowJukeBoxTransactionHandler"
 			]
 		}
 	}

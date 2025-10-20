@@ -16,9 +16,9 @@ Jukebox sessions:
 - Admin commands - Manually play any song from the queue or perform early payout and termination if it is your jukebox.
 
 Fully automated jukebox -  using the power of Forte and Scheduled transactions:
-1. Jukebox owner creates the jukebox, which mints the NFT and schedules the first `play_song_or_payout` transaction.
-1. `play_song_or_payout` transaction plays the next song from the queue. It also reads the song duration and schedules the next `play_song_or_payout` for once the current song ends.
-1. This is repeated for every song from the queue until flow jukebox session is expired. If session expired, `play_song_or_payout` does not play more songs, but handles payout and destroys the NFT, thus terminating the chain of scheduled transactions.
+1. Jukebox owner creates the jukebox, which mints the NFT and starts autoplay, which runs the first `scheduleNextPlay` transaction.
+1. `scheduleNextPlay` transaction plays the next song from the queue. It also reads the song duration and schedules the next `scheduleNextPlay` for once the current song ends.
+1. This is repeated for every song from the queue until flow jukebox session is expired. If session expired, `scheduleNextPlay` does not play more songs, but handles payout and destroys the NFT, thus terminating the chain of scheduled transactions.
 
 ## Dev Commands (PowerShell)
 
@@ -27,8 +27,8 @@ Set variables:
 
 TESTNET:
 ```
-$SIGNER = "FlowJukeboxDev2"
-$CONTRACTADDR = "0x7a017e02df4c4819"
+$SIGNER = "FlowJukeboxDev4"
+$CONTRACTADDR = "0x655ce02bc25c810d"
 $FLOWNETWORK = "testnet"
 ```
 
@@ -54,11 +54,11 @@ flow project deploy --network $FLOWNETWORK --update
 Create a jukebox with songs and start
 ```
 flow transactions send .\cadence\transactions\create_jukebox.cdc ABACAC 7200.0 --signer $SIGNER -n $FLOWNETWORK
-flow transactions send .\cadence\transactions\play_next_or_payout.cdc 1 -n $FLOWNETWORK --signer $SIGNER
+flow transactions send .\cadence\transactions\start_autoplay.cdc 1 -n $FLOWNETWORK --signer $SIGNER
 flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/SongABCDE" "SongABCDE" 30.0 30.0 --signer $SIGNER -n $FLOWNETWORK
 flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/SongABCDEF" "SongABCDEF" 30.0 20.0 --signer $SIGNER -n $FLOWNETWORK
-flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/SongABCDEFG" "SongABCDEFG" 60.0 10.0 --signer $SIGNER -n $FLOWNETWORK
-flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/SongABCDEFGH" "SongABCDEFGH" 180.0 5.0 --signer $SIGNER -n $FLOWNETWORK
+flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/SongABCDEFG" "SongABCDEFG" 30.0 10.0 --signer $SIGNER -n $FLOWNETWORK
+flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/SongABCDEFGH" "SongABCDEFGH" 30.0 5.0 --signer $SIGNER -n $FLOWNETWORK
 flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/SongABCDEFGHI" "SongABCDEFGHI" 210.0 3.0 --signer $SIGNER -n $FLOWNETWORK
 flow scripts execute .\cadence\scripts\get_jukebox_info.cdc 1 -n $FLOWNETWORK
 flow scripts execute .\cadence\scripts\get_queue.cdc $CONTRACTADDR 1 -n $FLOWNETWORK
@@ -73,7 +73,7 @@ flow transactions send .\cadence\transactions\create_jukebox.cdc ABACAC 7200.0 -
 
 Start the next song and run autoplay to play next or end queue with payout:
 ```
-flow transactions send .\cadence\transactions\play_next_or_payout.cdc 1 -n $FLOWNETWORK --signer $SIGNER
+flow transactions send .\cadence\transactions\start_autoplay.cdc 1 -n $FLOWNETWORK --signer $SIGNER
 ```
 
 Add a song:

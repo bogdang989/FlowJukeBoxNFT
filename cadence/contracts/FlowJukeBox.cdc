@@ -1,24 +1,18 @@
-import "NonFungibleToken"
-import "FungibleToken"
-import "FlowToken"
-import "ViewResolver"
-import "MetadataViews"
+// import "NonFungibleToken"
+// import "FungibleToken"
+// import "FlowToken"
+// import "ViewResolver"
+// import "MetadataViews"
+///////////////TESTNET IMPORTS/////////////////////
+import NonFungibleToken from 0x631e88ae7f1d7c20
+import FungibleToken from 0x9a0766d93b6608b7
+import FlowToken from 0x7e60df042a9c0868
+import ViewResolver from 0x631e88ae7f1d7c20
+import MetadataViews from 0x631e88ae7f1d7c20
 
 // Scheduled transactions
-import "FlowTransactionScheduler"
-import "FlowTransactionSchedulerUtils"
-
-
-///////////////TESTNET IMPORTS/////////////////////
-// import NonFungibleToken from 0x631e88ae7f1d7c20
-// import FungibleToken from 0x9a0766d93b6608b7
-// import FlowToken from 0x7e60df042a9c0868
-// import ViewResolver from 0x631e88ae7f1d7c20
-// import MetadataViews from 0x631e88ae7f1d7c20
-
-// // Scheduled transactions
-// import FlowTransactionScheduler from 0x8c5303eaa26202d6
-// import FlowTransactionSchedulerUtils from 0x8c5303eaa26202d6
+import FlowTransactionScheduler from 0x8c5303eaa26202d6
+import FlowTransactionSchedulerUtils from 0x8c5303eaa26202d6
 ///////////////////////////////////////////////
 
 access(all) contract FlowJukeBox: NonFungibleToken {
@@ -29,8 +23,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     access(all) let CollectionStoragePath: StoragePath
     access(all) let CollectionPublicPath: PublicPath
     access(all) let AdminStoragePath: StoragePath
-    access(all) let HandlerStoragePath: StoragePath
-    access(all) let HandlerPublicPath: PublicPath
+    // Handler paths moved to FlowJukeBoxTransactionHandler
     access(all) let contractAddress: Address
 
     access(all) var payoutPercentage: UFix64
@@ -47,14 +40,6 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     // ────────────────────────────────────────────────
     // Events
     // ────────────────────────────────────────────────
-    access(all) event AutoPlayScheduled(
-        nftId: UInt64,
-        scheduledTxId: UInt64,
-        executeAt: UFix64,
-        nextTrack: String,
-        duration: UFix64,
-        fee: UFix64
-    )
 
     // ────────────────────────────────────────────────
     // NowPlaying Struct
@@ -336,17 +321,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         nftRef._addEntryInternal(value: value, displayName: displayName, backing: amount, duration: duration, timestamp: now)
     }
 
-    // ────────────────────────────────────────────────
-    // PlayHandler for Scheduler
-    // ────────────────────────────────────────────────
-    access(all) resource PlayHandler: FlowTransactionScheduler.TransactionHandler {
-        access(FlowTransactionScheduler.Execute)
-        fun executeTransaction(id: UInt64, data: AnyStruct?) {
-            let nftId = data as! UInt64
-            FlowJukeBox.playNextOrPayout(nftID: nftId)
-        }
-    }
-    access(all) fun createPlayHandler(): @PlayHandler { return <- create PlayHandler() }
+        // Scheduler code moved to FlowJukeBoxTransactionHandler contract
 
     access(self) fun ensureTreasury() {
         if self.account.storage.borrow<&FlowToken.Vault>(from: self.TreasuryStoragePath) == nil {
@@ -402,72 +377,6 @@ access(all) contract FlowJukeBox: NonFungibleToken {
 
     //
     // ────────────────────────────────────────────────
-    // Scheduler helper
-    // ────────────────────────────────────────────────
-    //
-    access(all) fun scheduleNextPlay(nftId: UInt64, delay: UFix64, feeAmount: UFix64) {
-        if !FlowJukeBox.account.storage.check<@{FlowTransactionSchedulerUtils.Manager}>(
-            from: FlowTransactionSchedulerUtils.managerStoragePath
-        ) {
-            let mgr <- FlowTransactionSchedulerUtils.createManager()
-            FlowJukeBox.account.storage.save(<- mgr, to: FlowTransactionSchedulerUtils.managerStoragePath)
-            let cap = FlowJukeBox.account.capabilities.storage.issue<&{FlowTransactionSchedulerUtils.Manager}>(
-                FlowTransactionSchedulerUtils.managerStoragePath
-            )
-            FlowJukeBox.account.capabilities.publish(cap, at: FlowTransactionSchedulerUtils.managerPublicPath)
-        }
-
-        if !FlowJukeBox.account.storage.check<@FlowJukeBox.PlayHandler>(
-            from: FlowJukeBox.HandlerStoragePath
-        ) {
-            let h <- FlowJukeBox.createPlayHandler()
-            FlowJukeBox.account.storage.save(<- h, to: FlowJukeBox.HandlerStoragePath)
-        }
-
-        let execHandlerCap = FlowJukeBox.account.capabilities.storage.issue<
-            auth(FlowTransactionScheduler.Execute) &{FlowTransactionScheduler.TransactionHandler}
-        >(FlowJukeBox.HandlerStoragePath)
-
-        let now = getCurrentBlock().timestamp
-        let executeAt = now + delay
-
-        let vault = FlowJukeBox.account.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
-            from: /storage/flowTokenVault
-        ) ?? panic("Flow vault missing for scheduler fees")
-        let fees <- vault.withdraw(amount: feeAmount) as! @FlowToken.Vault
-
-        let manager = FlowJukeBox.account.storage.borrow<
-            auth(FlowTransactionSchedulerUtils.Owner) &{FlowTransactionSchedulerUtils.Manager}
-        >(from: FlowTransactionSchedulerUtils.managerStoragePath)
-            ?? panic("Manager not found")
-
-        let scheduledId = manager.schedule(
-            handlerCap: execHandlerCap,
-            data: nftId,
-            timestamp: executeAt,
-            priority: FlowTransactionScheduler.Priority.Low,
-            executionEffort: 1000,
-            fees: <- fees
-        )
-
-        let col = FlowJukeBox.account.storage.borrow<&FlowJukeBox.Collection>(
-            from: FlowJukeBox.CollectionStoragePath
-        ) ?? panic("Collection not found")
-        let nft = col.borrowJukeboxNFT(nftId) ?? panic("NFT not found")
-        let np = nft.nowPlaying
-
-        emit AutoPlayScheduled(
-            nftId: nftId,
-            scheduledTxId: scheduledId,
-            executeAt: executeAt,
-            nextTrack: np?.displayName ?? "unknown",
-            duration: np?.duration ?? 0.0,
-            fee: feeAmount
-        )
-    }
-
-    //
-    // ────────────────────────────────────────────────
     // Public logic (autoplay + payout)
     // ────────────────────────────────────────────────
     //
@@ -487,10 +396,11 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             return nil
         }
 
+        // Get next track to play
         let info = nftRef.playNext()
         let duration = info["duration"] as! UFix64
-        let fee: UFix64 = 0.1
-        self.scheduleNextPlay(nftId: nftID, delay: duration, feeAmount: fee)
+        
+        // Note: Scheduling is handled by external transaction scheduler
         return info
     }
 
@@ -573,8 +483,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         self.CollectionStoragePath = /storage/FlowJukeBoxCollection
         self.CollectionPublicPath  = /public/FlowJukeBoxCollection
         self.AdminStoragePath      = /storage/FlowJukeBoxAdmin
-        self.HandlerStoragePath    = /storage/FlowJukeBoxPlayHandler
-        self.HandlerPublicPath     = /public/FlowJukeBoxPlayHandler
+        // Handler paths removed (moved to FlowJukeBoxTransactionHandler)
         self.contractAddress       = self.account.address
         self.totalSupply = 0
         self.payoutPercentage = 0.80 // 80% to session owner
