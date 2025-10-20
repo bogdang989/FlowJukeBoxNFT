@@ -27,8 +27,8 @@ Set variables:
 
 TESTNET:
 ```
-$SIGNER = "FlowJukeboxDev4"
-$CONTRACTADDR = "0x655ce02bc25c810d"
+$SIGNER = "FlowJukeBoxDev1"
+$CONTRACTADDR = "0x34c91b1135c00528"
 $FLOWNETWORK = "testnet"
 ```
 
@@ -55,11 +55,12 @@ Create a jukebox with songs and start
 ```
 flow transactions send .\cadence\transactions\create_jukebox.cdc ABACAC 7200.0 --signer $SIGNER -n $FLOWNETWORK
 flow transactions send .\cadence\transactions\start_autoplay.cdc 1 -n $FLOWNETWORK --signer $SIGNER
-flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/SongABCDE" "SongABCDE" 30.0 30.0 --signer $SIGNER -n $FLOWNETWORK
-flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/SongABCDEF" "SongABCDEF" 30.0 20.0 --signer $SIGNER -n $FLOWNETWORK
-flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/SongABCDEFG" "SongABCDEFG" 30.0 10.0 --signer $SIGNER -n $FLOWNETWORK
-flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/SongABCDEFGH" "SongABCDEFGH" 30.0 5.0 --signer $SIGNER -n $FLOWNETWORK
-flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/SongABCDEFGHI" "SongABCDEFGHI" 210.0 3.0 --signer $SIGNER -n $FLOWNETWORK
+flow transactions send .\cadence\transactions\add_entry.cdc 1 "https://www.youtube.com/watch?v=tiSjxSc2hac" "Eva Cassidy - Songbird" 230.0 30.0 --signer $SIGNER -n $FLOWNETWORK
+flow transactions send .\cadence\transactions\add_entry.cdc 1 "https://www.youtube.com/watch?v=QHfxMGEb9iE" "Eva Cassidy - You Take My Breath Away
+" 269.0 20.0 --signer $SIGNER -n $FLOWNETWORK
+flow transactions send .\cadence\transactions\add_entry.cdc 1 "https://www.youtube.com/watch?v=9-hKDYQ6F54" "Eva Cassidy - Wade in the water" 245.0 10.0 --signer $SIGNER -n $FLOWNETWORK
+flow transactions send .\cadence\transactions\add_entry.cdc 1 "https://www.youtube.com/watch?v=ccmXWBluxIc" "Eva Cassidy - Ain't no sunshine" 206.0 5.0 --signer $SIGNER -n $FLOWNETWORK
+flow transactions send .\cadence\transactions\add_entry.cdc 1 "https://www.youtube.com/watch?v=9UVjjcOUJLE" "Eva Cassidy - Fields of gold" 286.0 3.0 --signer $SIGNER -n $FLOWNETWORK
 flow scripts execute .\cadence\scripts\get_jukebox_info.cdc 1 -n $FLOWNETWORK
 flow scripts execute .\cadence\scripts\get_queue.cdc $CONTRACTADDR 1 -n $FLOWNETWORK
 flow scripts execute .\cadence\scripts\list_jukeboxes.cdc -n $FLOWNETWORK
@@ -74,6 +75,11 @@ flow transactions send .\cadence\transactions\create_jukebox.cdc ABACAC 7200.0 -
 Start the next song and run autoplay to play next or end queue with payout:
 ```
 flow transactions send .\cadence\transactions\start_autoplay.cdc 1 -n $FLOWNETWORK --signer $SIGNER
+```
+
+Create and immediately start autoplay
+```
+flow transactions send .\cadence\transactions\mint_and_start_autoplay.cdc ABACAC 7200.0 --signer $SIGNER -n $FLOWNETWORK
 ```
 
 Add a song:

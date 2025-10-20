@@ -1,18 +1,18 @@
-// import "NonFungibleToken"
-// import "FungibleToken"
-// import "FlowToken"
-// import "ViewResolver"
-// import "MetadataViews"
+import "NonFungibleToken"
+import "FungibleToken"
+import "FlowToken"
+import "ViewResolver"
+import "MetadataViews"
 ///////////////TESTNET IMPORTS/////////////////////
-import NonFungibleToken from 0x631e88ae7f1d7c20
-import FungibleToken from 0x9a0766d93b6608b7
-import FlowToken from 0x7e60df042a9c0868
-import ViewResolver from 0x631e88ae7f1d7c20
-import MetadataViews from 0x631e88ae7f1d7c20
+// import NonFungibleToken from 0x631e88ae7f1d7c20
+// import FungibleToken from 0x9a0766d93b6608b7
+// import FlowToken from 0x7e60df042a9c0868
+// import ViewResolver from 0x631e88ae7f1d7c20
+// import MetadataViews from 0x631e88ae7f1d7c20
 
-// Scheduled transactions
-import FlowTransactionScheduler from 0x8c5303eaa26202d6
-import FlowTransactionSchedulerUtils from 0x8c5303eaa26202d6
+// // Scheduled transactions
+// import FlowTransactionScheduler from 0x8c5303eaa26202d6
+// import FlowTransactionSchedulerUtils from 0x8c5303eaa26202d6
 ///////////////////////////////////////////////
 
 access(all) contract FlowJukeBox: NonFungibleToken {
@@ -31,7 +31,6 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     access(all) var totalSupply: UInt64
     access(all) let pricePerHour: UFix64
     access(all) let TreasuryStoragePath: StoragePath
-
 
     // Duration bounds
     access(all) let minSongDuration: UFix64
@@ -171,8 +170,8 @@ access(all) contract FlowJukeBox: NonFungibleToken {
                 }
             }
 
-            var topIndex = 0
-            var i = 1
+            var topIndex: Int = 0
+            var i: Int = 1
             while i < self.queueEntries.length {
                 let cur = self.queueEntries[i]
                 let top = self.queueEntries[topIndex]
@@ -199,6 +198,40 @@ access(all) contract FlowJukeBox: NonFungibleToken {
                 "startTime": np.startTime,
                 "isDefault": np.isDefault
             }
+        }
+
+        access(all) fun playNextOrPayout(): {String: AnyStruct}? {
+            let now = getCurrentBlock().timestamp
+            let expiresAt = self.createdAt + self.queueDuration
+
+            if now > expiresAt {
+                // Handle payout if not already paid out
+                if !self.hasBeenPaidOut {
+                    let amountToPay: UFix64 = self.totalBacking * FlowJukeBox.payoutPercentage
+                    if amountToPay > 0.0 {
+                        // Get vault reference from contract
+                        let vaultRef = FlowJukeBox.getVaultForPayout()
+                        let vault <- vaultRef.withdraw(amount: amountToPay)
+
+                        // Get receiver capability for the owner
+                        let receiverCap = getAccount(self.sessionOwner)
+                            .capabilities
+                            .borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
+                            ?? panic("Receiver cap not found")
+
+                        // Deposit payment
+                        receiverCap.deposit(from: <- vault)
+                        self.hasBeenPaidOut = true
+                    }
+
+                    // After payout, request the contract to burn this NFT
+                    FlowJukeBox.burnNFT(id: self.id)
+                }
+                return nil
+            }
+
+            // If not expired, play next song
+            return self.playNext()
         }
 
         access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
@@ -243,7 +276,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     // ────────────────────────────────────────────────
     // Collection Resource
     // ────────────────────────────────────────────────
-    access(all) resource Collection: NonFungibleToken.Collection {
+    access(all) resource Collection: NonFungibleToken.Collection, NonFungibleToken.Provider, NonFungibleToken.CollectionPublic {
         access(all) var ownedNFTs: @{UInt64: {NonFungibleToken.NFT}}
         init() { self.ownedNFTs <- {} }
 
@@ -257,9 +290,9 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         access(all) view fun borrowNFT(_ id: UInt64): &{NonFungibleToken.NFT}? { return &self.ownedNFTs[id] }
 
         access(all) fun borrowJukeboxNFT(_ id: UInt64): &FlowJukeBox.NFT? {
-            let any = &self.ownedNFTs[id] as &{NonFungibleToken.NFT}?
-            if any == nil { return nil }
-            return any as! &FlowJukeBox.NFT
+            let nft = &self.ownedNFTs[id] as &{NonFungibleToken.NFT}?
+            if nft == nil { return nil }
+            return nft as! &FlowJukeBox.NFT 
         }
 
         access(NonFungibleToken.Withdraw)
@@ -277,11 +310,6 @@ access(all) contract FlowJukeBox: NonFungibleToken {
 
         access(all) fun createEmptyCollection(): @{NonFungibleToken.Collection} {
             return <- FlowJukeBox.createEmptyCollection(nftType: Type<@FlowJukeBox.NFT>())
-        }
-
-        access(all) fun removeAndDestroy(id: UInt64) {
-            let tok <- self.ownedNFTs.remove(key: id) ?? panic("NFT not found for burn")
-            destroy tok
         }
     }
 
@@ -380,6 +408,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     // Public logic (autoplay + payout)
     // ────────────────────────────────────────────────
     //
+    // Convenience function to get an NFT reference and call playNextOrPayout on it
     access(all) fun playNextOrPayout(nftID: UInt64): {String: AnyStruct}? {
         let col = self.account.storage.borrow<&FlowJukeBox.Collection>(
             from: self.CollectionStoragePath
@@ -388,47 +417,26 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         let nftRef = col.borrowJukeboxNFT(nftID)
             ?? panic("NFT not found")
 
-        let now = getCurrentBlock().timestamp
-        let expiresAt = nftRef.createdAt + nftRef.queueDuration
-
-        if now > expiresAt {
-            self._payoutAndBurn(nftID: nftID)
-            return nil
-        }
-
-        // Get next track to play
-        let info = nftRef.playNext()
-        let duration = info["duration"] as! UFix64
-        
-        // Note: Scheduling is handled by external transaction scheduler
-        return info
+        return nftRef.playNextOrPayout()
     }
 
-    access(contract) fun _payoutAndBurn(nftID: UInt64) {
-        let col = self.account.storage.borrow<&FlowJukeBox.Collection>(
-            from: self.CollectionStoragePath
-        ) ?? panic("Collection not found")
-        let nftRef = col.borrowJukeboxNFT(nftID)
-            ?? panic("NFT not found")
+    // Used by the NFT's playNextOrPayout method
+    access(contract) fun getVaultForPayout(): auth(FungibleToken.Withdraw) &FlowToken.Vault {
+        return self.account.storage.borrow<
+            auth(FungibleToken.Withdraw) &FlowToken.Vault
+        >(from: /storage/flowTokenVault)
+            ?? panic("Flow vault not found")
+    }
 
-        let owner: Address = nftRef.sessionOwner
-        let amountToPay: UFix64 = nftRef.totalBacking * self.payoutPercentage
+    // Used by the NFT's playNextOrPayout method to burn the NFT after payout
+    access(contract) fun burnNFT(id: UInt64) {
+        let collection = self.account.storage
+            .borrow<auth(NonFungibleToken.Withdraw) &Collection>(
+                from: self.CollectionStoragePath
+            ) ?? panic("Could not borrow collection")
 
-        if !nftRef.hasBeenPaidOut && amountToPay > 0.0 {
-            let vaultRef = self.account.storage.borrow<
-                auth(FungibleToken.Withdraw) &FlowToken.Vault
-            >(from: /storage/flowTokenVault)
-                ?? panic("Flow vault not found")
-            let vault <- vaultRef.withdraw(amount: amountToPay)
-            let receiverCap = getAccount(owner)
-                .capabilities
-                .borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
-                ?? panic("Receiver cap not found")
-            receiverCap.deposit(from: <- vault)
-            nftRef.markAsPaid()
-        }
-
-        col.removeAndDestroy(id: nftID)
+        let nft <- collection.withdraw(withdrawID: id)
+        destroy nft
     }
 
     //

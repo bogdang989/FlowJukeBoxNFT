@@ -1,20 +1,20 @@
-// import "FungibleToken"
-// import "FlowToken"
-// import "FlowTransactionScheduler"
-// import "FlowTransactionSchedulerUtils"
-// import "FlowJukeBox"
+import "FungibleToken"
+import "FlowToken"
+import "FlowTransactionScheduler"
+import "FlowTransactionSchedulerUtils"
+import "FlowJukeBox"
 
 ///////////////TESTNET IMPORTS/////////////////////
-import NonFungibleToken from 0x631e88ae7f1d7c20
-import FungibleToken from 0x9a0766d93b6608b7
-import FlowToken from 0x7e60df042a9c0868
-import ViewResolver from 0x631e88ae7f1d7c20
-import MetadataViews from 0x631e88ae7f1d7c20
-import FlowJukeBox from 0x655ce02bc25c810d
+// import NonFungibleToken from 0x631e88ae7f1d7c20
+// import FungibleToken from 0x9a0766d93b6608b7
+// import FlowToken from 0x7e60df042a9c0868
+// import ViewResolver from 0x631e88ae7f1d7c20
+// import MetadataViews from 0x631e88ae7f1d7c20
+// import FlowJukeBox from 0x34c91b1135c00528
 
-// Scheduled transactions
-import FlowTransactionScheduler from 0x8c5303eaa26202d6
-import FlowTransactionSchedulerUtils from 0x8c5303eaa26202d6
+// // Scheduled transactions
+// import FlowTransactionScheduler from 0x8c5303eaa26202d6
+// import FlowTransactionSchedulerUtils from 0x8c5303eaa26202d6
 
 access(all) contract FlowJukeBoxTransactionHandler {
     // Interface for NFT Collection to avoid circular dependencies
@@ -53,37 +53,41 @@ access(all) contract FlowJukeBoxTransactionHandler {
         access(FlowTransactionScheduler.Execute)
         fun executeTransaction(id: UInt64, data: AnyStruct?) {
             let nftId = data as! UInt64
-            log("🎬 AutoPlay executing for NFT ".concat(nftId.toString()))
             self.lastExecutionTime = getCurrentBlock().timestamp
-            
+
             // Get reference to jukebox contract
             let account = getAccount(FlowJukeBoxTransactionHandler.jukeboxAddress)
             let capability = account.capabilities
                 .borrow<&FlowJukeBox.Collection>(
                     FlowJukeBoxTransactionHandler.jukeboxCollectionPath
                 ) ?? panic("Could not borrow jukebox collection")
-            
-            // Play next song and get duration
-            let nft = capability.borrowJukeboxNFT(nftId) 
-                ?? panic("Could not borrow NFT")
-            let songInfo = nft.playNext()
-            let duration = songInfo["duration"] as! UFix64
-            let now = getCurrentBlock().timestamp
-            
-            // Schedule next play after current song
-            let vault = FlowJukeBoxTransactionHandler.account.storage
-                .borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
-                    from: /storage/flowTokenVault
-                ) ?? panic("Flow vault missing for scheduler fees")
-            let fees <- vault.withdraw(amount: 0.1) // Minimal fee for scheduling
 
-            FlowJukeBoxTransactionHandler.scheduleNextPlay(
-                nftId: nftId,
-                delay: duration, 
-                feeAmount: 0.1
-            )
-            
-            destroy fees
+            // Play next song and get duration
+            let nft = capability.borrowJukeboxNFT(nftId)
+                ?? panic("Could not borrow NFT")
+
+            let songInfoOpt = nft.playNextOrPayout()
+            if let songInfo = songInfoOpt {
+                let duration = songInfo["duration"] as! UFix64
+                let now = getCurrentBlock().timestamp
+
+                // Schedule next play after current song
+                let vault = FlowJukeBoxTransactionHandler.account.storage
+                    .borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
+                        from: /storage/flowTokenVault
+                    ) ?? panic("Flow vault missing for scheduler fees")
+                let fees <- vault.withdraw(amount: 0.1) // Minimal fee for scheduling
+
+                FlowJukeBoxTransactionHandler.scheduleNextPlay(
+                    nftId: nftId,
+                    delay: duration,
+                    feeAmount: 0.1
+                )
+
+                destroy fees
+            } else {
+                log("ℹ️ Jukebox expired — payout handled, nothing to schedule.")
+            }
         }
 
         init(contractAddress: Address) {
@@ -232,7 +236,5 @@ access(all) contract FlowJukeBoxTransactionHandler {
         // Create and store handler resource
         let h <- create PlayHandler(contractAddress: self.jukeboxAddress)
         self.account.storage.save(<- h, to: self.HandlerStoragePath)
-
-        log("✅ FlowJukeBoxTransactionHandler deployed")
     }
 }

@@ -147,6 +147,16 @@
 				"testnet": "7e60df042a9c0868"
 			}
 		},
+		"FlowTransactionScheduler": {
+			"source": "testnet://8c5303eaa26202d6.FlowTransactionScheduler",
+			"hash": "",
+			"aliases": {}
+		},
+		"FlowTransactionSchedulerUtils": {
+			"source": "testnet://8c5303eaa26202d6.FlowTransactionSchedulerUtils",
+			"hash": "",
+			"aliases": {}
+		},
 		"FungibleToken": {
 			"source": "mainnet://f233dcee88fe0abe.FungibleToken",
 			"hash": "23c1159cf99b2b039b6b868d782d57ae39b8d784045d81597f100a4782f0285b",
@@ -227,18 +237,6 @@
 				"mainnet": "1d7e57aa55817448",
 				"testnet": "631e88ae7f1d7c20"
 			}
-		},
-		"FlowTransactionScheduler": {
-			"source": "testnet://8c5303eaa26202d6.FlowTransactionScheduler",
-			"aliases": {
-				"testnet": "8c5303eaa26202d6"
-			}
-		},
-		"FlowTransactionSchedulerUtils": {
-			"source": "testnet://8c5303eaa26202d6.FlowTransactionSchedulerUtils",
-			"aliases": {
-				"testnet": "8c5303eaa26202d6"
-			}
 		}
 	},
 	"networks": {
@@ -248,80 +246,18 @@
 		"testnet": "access.devnet.nodes.onflow.org:9000"
 	},
 	"accounts": {
-		"FlowJukeboxDev1": {
-			"address": "2636c731d469aa64",
+		"FlowJukeBoxDev1": {
+			"address": "34c91b1135c00528",
 			"key": {
 				"type": "file",
-				"location": "FlowJukeboxDev1.pkey"
+				"location": "FlowJukeBoxDev1.pkey"
 			}
-		},
-		"FlowJukeboxDev2": {
-			"address": "7a017e02df4c4819",
-			"key": {
-				"type": "file",
-				"location": "FlowJukeboxDev2.pkey"
-			}
-		},
-		"FlowJukeboxDev3": {
-			"address": "976f3cc54aa28bb3",
-			"key": {
-				"type": "file",
-				"location": "FlowJukeboxDev3.pkey"
-			}
-		},
-		"FlowJukeboxDev4": {
-			"address": "655ce02bc25c810d",
-			"key": {
-				"type": "file",
-				"location": "FlowJukeboxDev4.pkey"
-			}
-		},
-		"acc1": {
-			"address": "179b6b1cb6755e31",
-			"key": "c7179e8ff2b7277794921d77f4601b44ad3a94a9deb94daca94d8864cf138548"
-		},
-		"acc2": {
-			"address": "179b6b1cb6755e31",
-			"key": "c2d7be9cf7095500785a9b6c2016e48e47b8b4613294a5bc75c298b4342d7359"
-		},
-		"acc3": {
-			"address": "179b6b1cb6755e31",
-			"key": "d0a7ab379982bd64ac8f716b9bd7ef8ee7df55082bdf0415ae0fdbf83171fbad"
-		},
-		"acc4": {
-			"address": "179b6b1cb6755e31",
-			"key": "dddcb565523564d847cbe83589ddfad6a9cd7162f82f651a1c363e1f0087f849"
-		},
-		"acc5": {
-			"address": "179b6b1cb6755e31",
-			"key": "4e62442f138d68fba097ec9a85decf93f8a89804755d8e01ff68067849e23978"
 		},
 		"emulator-account": {
 			"address": "f8d6e0586b0a20c7",
 			"key": {
 				"type": "file",
 				"location": "emulator-account.pkey"
-			}
-		},
-		"tn1": {
-			"address": "1a892184172f773e",
-			"key": {
-				"type": "file",
-				"location": "tn1.pkey"
-			}
-		},
-		"tn2": {
-			"address": "11a3131ddbaa0917",
-			"key": {
-				"type": "file",
-				"location": "tn2.pkey"
-			}
-		},
-		"tn3": {
-			"address": "c2517eecc593aabb",
-			"key": {
-				"type": "file",
-				"location": "tn3.pkey"
 			}
 		}
 	},
@@ -335,7 +271,7 @@
 			]
 		},
 		"testnet": {
-			"FlowJukeboxDev4": [
+			"FlowJukeBoxDev1": [
 				"FlowJukeBox",
 				"FlowJukeBoxTransactionHandler"
 			]
