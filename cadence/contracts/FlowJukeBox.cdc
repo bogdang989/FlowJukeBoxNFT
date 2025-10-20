@@ -207,7 +207,6 @@ access(all) contract FlowJukeBox: NonFungibleToken {
                 isDefault: false
             )
             self.nowPlaying = np
-            log("▶️ Now playing: ".concat(np.displayName))
             return {
                 "value": np.value,
                 "displayName": np.displayName,
@@ -335,7 +334,6 @@ access(all) contract FlowJukeBox: NonFungibleToken {
 
         let now = getCurrentBlock().timestamp
         nftRef._addEntryInternal(value: value, displayName: displayName, backing: amount, duration: duration, timestamp: now)
-        log("💰 ".concat(amount.toString()).concat(" FLOW added to #").concat(nftID.toString()))
     }
 
     // ────────────────────────────────────────────────
@@ -345,7 +343,6 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         access(FlowTransactionScheduler.Execute)
         fun executeTransaction(id: UInt64, data: AnyStruct?) {
             let nftId = data as! UInt64
-            log("🎬 AutoPlay executing for NFT ".concat(nftId.toString()))
             FlowJukeBox.playNextOrPayout(nftID: nftId)
         }
     }
@@ -400,8 +397,6 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         ) ?? panic("Contract collection not found")
         col.deposit(token: <- nft)
 
-        log("✅ Minted FlowJukeBox #".concat(id.toString())
-            .concat(" for ").concat(mintPrice.toString()).concat(" FLOW"))
         return id
     }
 
@@ -524,9 +519,6 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         }
 
         col.removeAndDestroy(id: nftID)
-        log("💸 Paid ".concat(amountToPay.toString())
-            .concat(" FLOW to ").concat(owner.toString())
-            .concat(" and burned NFT #").concat(nftID.toString()))
     }
 
     //
@@ -602,6 +594,5 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         let cap = self.account.capabilities.storage.issue<&FlowJukeBox.Collection>(self.CollectionStoragePath)
         self.account.capabilities.publish(cap, at: self.CollectionPublicPath)
         self.ensureTreasury()
-        log("✅ FlowJukeBox deployed successfully with automatic scheduling.")
     }
 }
