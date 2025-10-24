@@ -19,7 +19,7 @@ Jukebox sessions:
 - Payout - Each jukebox has limited lifetime. After the jukebox lifetime expires, percentage of accumulated fees for adding songs to the jukebox is paid out to the wallet that created the jukebox session.
 - scheduleNextPlay - Contract method, when called checks if session lifetime expired. If true, handles payout and terminates the session, else picks the next song from the queue and plays it. 
 - NFT metadata - NFT stores the queue, as well as info on what is now playing and when it started playing.
-- 
+  
 Fully automated jukebox -  using the power of Forte and Scheduled transactions:
 1. Jukebox owner creates the jukebox, which mints the NFT and starts autoplay, which runs the first `scheduleNextPlay` transaction.
 1. `scheduleNextPlay` transaction plays the next song from the queue. It also reads the song duration and schedules the next `scheduleNextPlay` for once the current song ends.
