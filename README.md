@@ -1,6 +1,10 @@
 # Flow jukebox
 
-Deployed on **Testnet**: A.34c91b1135c00528.FlowJukeBox , A.34c91b1135c00528.FlowJukeBoxTransactionHandler
+Deployed on **Testnet**: 
+- A.34c91b1135c00528.FlowJukeBox
+- A.34c91b1135c00528.FlowJukeBoxTransactionHandler
+
+## About
 
 Flow jukebox is better than any other jukebox, because it works with $FLOW token. 
 <p align="center">
@@ -13,10 +17,9 @@ Jukebox sessions:
 - Creating a jukebox - Each jukebox session is an NFT that can be minted by anyone, after paying the minting fee. The NFT lives in the contract wallet.
 - Adding songs - Anyone can add songs to a jukebox session, by providing the song info and arbitrary amount of $FLOW token to rank it higher in the queue. More $FLOW backing a song, the earlier the song comes into the queue
 - Payout - Each jukebox has limited lifetime. After the jukebox lifetime expires, percentage of accumulated fees for adding songs to the jukebox is paid out to the wallet that created the jukebox session.
-- Play_song_or_payout - Contract method, when called checks if session lifetime expired. If true, handles payout and terminates the session, else picks the next song from the queue and plays it. 
+- scheduleNextPlay - Contract method, when called checks if session lifetime expired. If true, handles payout and terminates the session, else picks the next song from the queue and plays it. 
 - NFT metadata - NFT stores the queue, as well as info on what is now playing and when it started playing.
-- Admin commands - Manually play any song from the queue or perform early payout and termination if it is your jukebox.
-
+- 
 Fully automated jukebox -  using the power of Forte and Scheduled transactions:
 1. Jukebox owner creates the jukebox, which mints the NFT and starts autoplay, which runs the first `scheduleNextPlay` transaction.
 1. `scheduleNextPlay` transaction plays the next song from the queue. It also reads the song duration and schedules the next `scheduleNextPlay` for once the current song ends.
