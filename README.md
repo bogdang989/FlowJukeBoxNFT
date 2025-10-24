@@ -1,5 +1,7 @@
 # Flow jukebox
 
+Deployed on **Testnet**: A.34c91b1135c00528.FlowJukeBox , A.34c91b1135c00528.FlowJukeBoxTransactionHandler
+
 Flow jukebox is better than any other jukebox, because it works with $FLOW token. 
 <p align="center">
   <img src="./FlowJukeboxLogo.png" alt="Flow Jukebox Logo" width="300"/>
