@@ -120,6 +120,8 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             timestamp: UFix64
         ) {
             pre {
+                backing % 5.0 == 0.0:
+                    "Backing amount must be a multiple of 5.0 FLOW"
                 duration >= FlowJukeBox.minSongDuration:
                     "Track duration must be at least ".concat(FlowJukeBox.minSongDuration.toString())
                 duration <= FlowJukeBox.maxSongDuration:
@@ -429,7 +431,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     }
 
     // Used by the NFT's playNextOrPayout method to burn the NFT after payout
-    access(contract) fun burnNFT(id: UInt64) {
+    access(all) fun burnNFT(id: UInt64) {
         let collection = self.account.storage
             .borrow<auth(NonFungibleToken.Withdraw) &Collection>(
                 from: self.CollectionStoragePath
@@ -502,8 +504,8 @@ access(all) contract FlowJukeBox: NonFungibleToken {
 
         self.defaultTrack = {
             "value": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", // Never
-            "displayName": "Default Track",
-            "duration": 180.0
+            "displayName": "Never gonna give you up",
+            "duration": 213.0
         }
 
         let col <- create FlowJukeBox.Collection()
