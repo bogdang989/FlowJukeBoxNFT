@@ -17,22 +17,17 @@ import "FlowJukeBox"
 // import FlowTransactionSchedulerUtils from 0x8c5303eaa26202d6
 
 access(all) contract FlowJukeBoxTransactionHandler {
-    // Interface for NFT Collection to avoid circular dependencies
     // Reference to FlowJukeBox contract
     access(all) let jukeboxAddress: Address
     access(all) let jukeboxCollectionPath: PublicPath
 
-    // ────────────────────────────────────────────────
     // Core Paths
-    // ────────────────────────────────────────────────
     access(all) let HandlerStoragePath: StoragePath
     access(all) let HandlerPublicPath: PublicPath
     access(all) let ManagerStoragePath: StoragePath
     access(all) let ManagerPublicPath: PublicPath
 
-    // ────────────────────────────────────────────────
     // Events
-    // ────────────────────────────────────────────────
     access(all) event AutoPlayScheduled(
         nftId: UInt64,
         scheduledTxId: UInt64,
@@ -42,11 +37,8 @@ access(all) contract FlowJukeBoxTransactionHandler {
         fee: UFix64
     )
 
-    // ────────────────────────────────────────────────
     // Transaction Handler Resource
-    // ────────────────────────────────────────────────
     access(all) resource PlayHandler: FlowTransactionScheduler.TransactionHandler {
-        // Track last execution time for monitoring
         access(FlowTransactionScheduler.Execute) var lastExecutionTime: UFix64?
         access(all) let contractAddress: Address
 
@@ -69,22 +61,12 @@ access(all) contract FlowJukeBoxTransactionHandler {
             let songInfoOpt = nft.playNextOrPayout()
             if let songInfo = songInfoOpt {
                 let duration = songInfo["duration"] as! UFix64
-                let now = getCurrentBlock().timestamp
-
-                // Schedule next play after current song
-                let vault = FlowJukeBoxTransactionHandler.account.storage
-                    .borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
-                        from: /storage/flowTokenVault
-                    ) ?? panic("Flow vault missing for scheduler fees")
-                let fees <- vault.withdraw(amount: 0.1) // Minimal fee for scheduling
 
                 FlowJukeBoxTransactionHandler.scheduleNextPlay(
                     nftId: nftId,
                     delay: duration,
                     feeAmount: 0.1
                 )
-
-                destroy fees
             } else {
                 log("ℹ️ Jukebox expired — payout handled, nothing to schedule.")
             }
@@ -100,9 +82,7 @@ access(all) contract FlowJukeBoxTransactionHandler {
         return <- create PlayHandler(contractAddress: self.jukeboxAddress)
     }
 
-    // ────────────────────────────────────────────────
     // Scheduler Functions
-    // ────────────────────────────────────────────────
     access(all) fun scheduleNextPlay(nftId: UInt64, delay: UFix64, feeAmount: UFix64) {
         self.ensureHandlerAndManager()
 
@@ -137,7 +117,7 @@ access(all) contract FlowJukeBoxTransactionHandler {
         let capability = account.capabilities.borrow<&FlowJukeBox.Collection>(
             self.jukeboxCollectionPath
         ) ?? panic("Could not borrow jukebox collection")
-            
+
         let _ = capability.borrowJukeboxNFT(nftId) ?? panic("NFT not found")
 
         emit AutoPlayScheduled(
@@ -150,9 +130,7 @@ access(all) contract FlowJukeBoxTransactionHandler {
         )
     }
 
-    // ────────────────────────────────────────────────
     // Internal Functions
-    // ────────────────────────────────────────────────
     access(contract) fun ensureHandlerAndManager() {
         if !self.account.storage.check<@{FlowTransactionSchedulerUtils.Manager}>(
             from: self.ManagerStoragePath
@@ -174,23 +152,31 @@ access(all) contract FlowJukeBoxTransactionHandler {
     }
 
     // ────────────────────────────────────────────────
-    // Monitoring & Maintenance
+    // Monitoring & Maintenance (FIXED)
     // ────────────────────────────────────────────────
+    //
+    // Use the manager's time index to fetch IDs scheduled before `before`,
+    // cancel only those still `Scheduled`, and refund fees.
+    //
     access(contract) fun cleanupOldTransactions(before: UFix64) {
         let manager = self.account.storage.borrow<
             auth(FlowTransactionSchedulerUtils.Owner) &{FlowTransactionSchedulerUtils.Manager}
         >(from: self.ManagerStoragePath)
             ?? panic("Manager not found")
-            
-        let idsToCheck = manager.getTransactionIDs()
-        for id in idsToCheck {
-            let status = manager.getTransactionStatus(id: id) 
-            if status == FlowTransactionScheduler.Status.Executed || status == FlowTransactionScheduler.Status.Canceled {
-                if let txData = manager.getTransactionData(id) {
-                    if txData.id == id {
-                        destroy <- manager.cancel(id: id)
-                    }
-                }
+
+        let treasury = self.account.storage.borrow<&FlowToken.Vault>(
+            from: /storage/flowTokenVault
+        ) ?? panic("Flow vault missing")
+
+        // All tx IDs with scheduled timestamp <= `before`
+        let oldIds = manager.getTransactionIDsByTimestamp(before)
+
+        for id in oldIds {
+            let status = manager.getTransactionStatus(id: id)
+            if status == FlowTransactionScheduler.Status.Scheduled {
+                let refund <- manager.cancel(id: id)
+                treasury.deposit(from: <- refund)
+                log("🧹 Canceled & refunded scheduled tx ".concat(id.toString()))
             }
         }
     }
@@ -218,7 +204,7 @@ access(all) contract FlowJukeBoxTransactionHandler {
         // Initialize contract references
         self.jukeboxAddress = getAccount(FlowJukeBox.contractAddress).address
         self.jukeboxCollectionPath = FlowJukeBox.CollectionPublicPath
-        
+
         // Initialize paths
         self.HandlerStoragePath = /storage/FlowJukeBoxPlayHandler
         self.HandlerPublicPath = /public/FlowJukeBoxPlayHandler
