@@ -500,7 +500,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         self.minSongDuration = 15.0 // seconds
         self.maxSongDuration = 300.0 // seconds
         self.TreasuryStoragePath   = /storage/FlowJukeBoxTreasury
-        self.pricePerHour = 5.0 // 5 FLOW per hour of queue time
+        self.pricePerHour = 10.0 // 10 FLOW per hour of queue time
 
         self.defaultTrack = {
             "value": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", // Never
