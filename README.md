@@ -32,8 +32,8 @@ Set variables:
 
 TESTNET:
 ```
-$SIGNER = "FlowJukeBoxDev1"
-$CONTRACTADDR = "0x34c91b1135c00528"
+$SIGNER = "FlowJukeBoxDev2"
+$CONTRACTADDR = "0x9c3f2ba02c56c5c3"
 $FLOWNETWORK = "testnet"
 ```
 
@@ -65,7 +65,7 @@ flow transactions send .\cadence\transactions\add_entry.cdc 1 "https://www.youtu
 " 269.0 20.0 --signer $SIGNER -n $FLOWNETWORK
 flow transactions send .\cadence\transactions\add_entry.cdc 1 "https://www.youtube.com/watch?v=9-hKDYQ6F54" "Eva Cassidy - Wade in the water" 245.0 10.0 --signer $SIGNER -n $FLOWNETWORK
 flow transactions send .\cadence\transactions\add_entry.cdc 1 "https://www.youtube.com/watch?v=ccmXWBluxIc" "Eva Cassidy - Ain't no sunshine" 206.0 5.0 --signer $SIGNER -n $FLOWNETWORK
-flow transactions send .\cadence\transactions\add_entry.cdc 1 "https://www.youtube.com/watch?v=9UVjjcOUJLE" "Eva Cassidy - Fields of gold" 286.0 3.0 --signer $SIGNER -n $FLOWNETWORK
+flow transactions send .\cadence\transactions\add_entry.cdc 1 "https://www.youtube.com/watch?v=9UVjjcOUJLE" "Eva Cassidy - Fields of gold" 286.0 5.0 --signer $SIGNER -n $FLOWNETWORK
 flow scripts execute .\cadence\scripts\get_jukebox_info.cdc 1 -n $FLOWNETWORK
 flow scripts execute .\cadence\scripts\get_queue.cdc $CONTRACTADDR 1 -n $FLOWNETWORK
 flow scripts execute .\cadence\scripts\list_jukeboxes.cdc -n $FLOWNETWORK

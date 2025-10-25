@@ -246,11 +246,18 @@
 		"testnet": "access.devnet.nodes.onflow.org:9000"
 	},
 	"accounts": {
-		"FlowJukeBoxDev1": {
-			"address": "34c91b1135c00528",
+		"FlowJukeBoxDev2": {
+			"address": "9c3f2ba02c56c5c3",
 			"key": {
 				"type": "file",
-				"location": "FlowJukeBoxDev1.pkey"
+				"location": "FlowJukeBoxDev2.pkey"
+			}
+		},
+		"FlowJukeBoxDev3": {
+			"address": "6e0cf74ea4a8cf7d",
+			"key": {
+				"type": "file",
+				"location": "FlowJukeBoxDev3.pkey"
 			}
 		},
 		"emulator-account": {
@@ -271,7 +278,7 @@
 			]
 		},
 		"testnet": {
-			"FlowJukeBoxDev1": [
+			"FlowJukeBoxDev3": [
 				"FlowJukeBox",
 				"FlowJukeBoxTransactionHandler"
 			]
