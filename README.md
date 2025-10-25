@@ -1,8 +1,8 @@
 # Flow jukebox
 
 Deployed on **Testnet**: 
-- A.34c91b1135c00528.FlowJukeBox
-- A.34c91b1135c00528.FlowJukeBoxTransactionHandler
+- A.9c3f2ba02c56c5c3.FlowJukeBox
+- A.9c3f2ba02c56c5c3.FlowJukeBoxTransactionHandler
 
 ## About
 
@@ -32,7 +32,7 @@ Set variables:
 
 TESTNET:
 ```
-$SIGNER = "FlowJukeBoxDev2"
+$SIGNER = "FlowJukeBoxDev3"
 $CONTRACTADDR = "0x9c3f2ba02c56c5c3"
 $FLOWNETWORK = "testnet"
 ```
