@@ -4,12 +4,102 @@ Deployed on **Testnet**:
 - A.9c3f2ba02c56c5c3.FlowJukeBox
 - A.9c3f2ba02c56c5c3.FlowJukeBoxTransactionHandler
 
-## About
 
-Flow jukebox is better than any other jukebox, because it works with $FLOW token. 
-<p align="center">
-  <img src="./FlowJukeboxLogo.png" alt="Flow Jukebox Logo" width="300"/>
-</p>
+# 🎵 Flow Jukebox — Music Powered by Smart Contracts
+
+**Live:** [https://flow-juke-box-ui.vercel.app/](https://flow-juke-box-ui.vercel.app/)
+
+---
+
+## 🎯 Short Summary
+**Flow Jukebox** transforms music experiences into interactive on-chain events.  
+Anyone can start a jukebox session, play music on a shared screen, and let the crowd vote, boost, or add songs — all using Flow tokens.  
+It’s a decentralized, token-powered social music queue built entirely on the Flow blockchain.
+
+---
+
+## 🚀 The Idea
+
+Imagine owning a bar, organizing a house party, or running a virtual event. No need for a DJ or specialized hardware, you just open Flow Jukebox on the screen and the party can get started.  
+People connect their Flow wallets, browse songs, and use tokens to:
+
+- 💡 **Add songs** to the queue  
+- 🔼 **Boost favorites** to the top  
+- 👀 **Watch in real time** as the queue reorders on-chain  
+
+Every interaction — adding, boosting, and playback scheduling — is processed instantly through Flow smart contracts.
+
+---
+
+## ⚙️ How It Works
+
+### 🎶 Start a Jukebox
+The host launches a jukebox session by paying a Flow fee.  
+This deploys a **Jukebox NFT** representing that session.
+
+### 💰 Queue Songs with Flow Tokens
+Users interact via the web app to add or boost songs, sending Flow payments to the jukebox contract.  
+Each action triggers an on-chain update — the queue dynamically reorders by total backing amount.
+
+### ⏱️ Autoplay & Payouts
+The jukebox runs on a timer powered by **Flow Forte Scheduled Transactions**.  
+When a session ends, the contract automatically distributes payouts to the jukebox owner and burns the session NFT.
+
+---
+
+## 💎 Built With
+
+- **Smart Contracts:** Written in Cadence, deployed on Flow Testnet  
+- **Scheduled Automation:** Powered by Flow Forte Transaction Scheduler  
+- **Frontend:** React + Vite, integrated with FCL (Flow Client Library)  
+- **Wallet Integration:** Full Flow wallet support for adding or boosting songs  
+
+---
+
+## 🌐 Why It’s Different
+
+Flow Jukebox blends entertainment, ownership, and real-time blockchain utility:
+
+- No centralized playlist manager — the community controls the queue.  
+- Every action is transparent and verifiable on-chain.  
+- Venues and event hosts can monetize engagement instantly.  
+
+It’s a perfect example of Flow’s vision: **fun, fast, and frictionless consumer dApps** that feel magical — not technical.
+
+---
+
+## 🗺️ Roadmap
+
+### **Phase 1 — Proof of Concept (✅ Completed)**
+
+- 💿 **Functional Prototype:** Built and deployed the first working Flow Jukebox dApp on Flow Testnet.  
+- 🔗 **Smart Contracts in Cadence:** Implemented NFT-based jukebox sessions with automatic payouts, burn logic, and time-based expiry via Flow Forte Scheduled Transactions.  
+- 🖥️ **Frontend:** Created a React + FCL interface for starting jukeboxes, adding songs, and boosting them with Flow tokens.  
+- ▶️ **YouTube Integration:** Integrated YouTube playback for all added songs, allowing the jukebox to stream real videos in sync with on-chain actions.  
+  The core `FlowJukeBox` contract is platform agnostic — YouTube is used to demonstrate capability and prove the concept.  
+- ⚙️ **End-to-End Validation:** Demonstrated instant on-chain queue reordering, payouts, and session finalization — proving the concept’s viability and user appeal.
+
+---
+
+### **Phase 2 — Mainnet Launch (🚧 In Progress)**
+
+- 🌐 **Mainnet Deployment:** Migrate smart contracts to Flow Mainnet and validate all wallet, schedule, and payout flows in production.  
+- 🔐 **Audit & Optimization:** Conduct contract security reviews, optimize gas efficiency, and streamline transaction UX.  
+- 💳 **Payment Layer:** Finalize Flow token logic for adding/boosting songs using real on-chain payments.  
+- 📊 **Analytics Dashboard:** Implement session metrics, user leaderboards, and transaction summaries for hosts.  
+- 🪙 **Monetization:** Finalize business model details for host earnings and reward structures to power real jukebox sessions at events or within communities.
+
+---
+
+### **Phase 3 — Adoption & Expansion (🔜 Upcoming)**
+
+- 🎧 **Online Events:** Host live, shared jukebox sessions (e.g., Flow Fridays, Hackathon closing party) where users join, boost, and listen together.  
+- 💬 **Community Features:** Add reactions, live chat, and global leaderboards to make jukebox sessions social and interactive.  
+- 🏟️ **IRL Integrations:** Deploy Flow Jukebox to real-world venues — cafés, bars, and community meetups — using QR-code access.  
+- 💰 **Fiat-to-Flow Gateway:** Enable seamless entry for non-crypto users through automatic fiat conversion into Flow tokens.  
+- 📱 **Mobile Experience:** Launch mobile-optimized version for quick participation and song boosting.  
+- 🤝 **Partnership Ecosystem:** Collaborate with Flow projects, music collectives, and venues to make Flow Jukebox the go-to interactive music layer — both online and offline.
+
 
 ## How it works
 
@@ -89,7 +179,7 @@ flow transactions send .\cadence\transactions\mint_and_start_autoplay.cdc ABACAC
 
 Add a song:
 ```
-flow transactions send .\cadence\transactions\add_entry.cdc 1 "youtube.com/blabla" "SongABCD" 20.0 30.0 --signer $SIGNER -n $FLOWNETWORK
+flow transactions send .\cadence\transactions\add_entry.cdc 1 "https://www.youtube.com/watch?v=9UVjjcOUJLE" "Eva Cassidy - Fields of gold" 286.0 5.0 --signer $SIGNER -n $FLOWNETWORK
 ```
 
 Get single jukebox details:
