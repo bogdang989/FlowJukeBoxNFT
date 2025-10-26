@@ -7,6 +7,8 @@ Deployed on **Testnet**:
 
 **Live:** [https://flow-juke-box-ui.vercel.app/](https://flow-juke-box-ui.vercel.app/)
 
+**Promo video:** [https://www.youtube.com/watch?v=EaJTwLqPro8](https://www.youtube.com/watch?v=EaJTwLqPro8)
+
 ---
 
 ## 🎯 Short Summary
