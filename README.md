@@ -1,11 +1,9 @@
-# Flow jukebox
+# 🎵 Flow Jukebox — Music Powered by Smart Contracts
 
 Deployed on **Testnet**: 
 - A.9c3f2ba02c56c5c3.FlowJukeBox
 - A.9c3f2ba02c56c5c3.FlowJukeBoxTransactionHandler
 
-
-# 🎵 Flow Jukebox — Music Powered by Smart Contracts
 
 **Live:** [https://flow-juke-box-ui.vercel.app/](https://flow-juke-box-ui.vercel.app/)
 
