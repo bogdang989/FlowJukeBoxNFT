@@ -415,8 +415,6 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         nftRef._addEntryInternal(value: value, displayName: displayName, backing: amount, duration: duration, timestamp: now)
     }
 
-        // Scheduler code moved to FlowJukeBoxTransactionHandler contract
-
     access(self) fun ensureTreasury() {
         if self.account.storage.borrow<&FlowToken.Vault>(from: self.TreasuryStoragePath) == nil {
             self.account.storage.save(
