@@ -58,7 +58,8 @@ access(all) contract FlowJukeBoxTransactionHandler {
                 ?? panic("Could not borrow NFT")
 
             let songInfoOpt = nft.playNextOrPayout()
-            if let songInfo = songInfoOpt {
+            if songInfoOpt != nil {
+                let songInfo = songInfoOpt!
                 let duration = songInfo["duration"] as! UFix64
 
                 FlowJukeBoxTransactionHandler.scheduleNextPlay(

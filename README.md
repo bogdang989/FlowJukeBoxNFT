@@ -180,6 +180,10 @@ Add a song:
 flow transactions send .\cadence\transactions\add_entry.cdc 1 "https://www.youtube.com/watch?v=9UVjjcOUJLE" "Eva Cassidy - Fields of gold" 286.0 5.0 --signer $SIGNER -n $FLOWNETWORK
 ```
 
+```
+flow transactions send .\cadence\transactions\extend_jukebox.cdc 1 7200.0 --signer $SIGNER -n $FLOWNETWORK
+```
+
 Get single jukebox details:
 ```
 flow scripts execute .\cadence\scripts\get_jukebox_info.cdc 1 -n $FLOWNETWORK

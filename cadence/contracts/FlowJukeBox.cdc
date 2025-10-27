@@ -88,8 +88,8 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     access(all) resource NFT: NonFungibleToken.NFT, ViewResolver.Resolver {
         access(all) let id: UInt64
         access(all) let sessionOwner: Address
-        access(all) let queueIdentifier: String
-        access(all) let queueDuration: UFix64
+    access(all) let queueIdentifier: String
+    access(all) var queueDuration: UFix64
         access(all) let createdAt: UFix64
         access(all) var queueEntries: [QueueEntry]
         access(all) var totalDuration: UFix64
@@ -150,6 +150,39 @@ access(all) contract FlowJukeBox: NonFungibleToken {
             }
             self.totalBacking = self.totalBacking + backing
             self.totalDuration = self.totalDuration + duration
+        }
+
+        // Extend the lifetime of this jukebox session
+        // additionalDuration must be a multiple of 3600.0 (seconds)
+        access(all) fun extendLifetime(additionalDuration: UFix64, extender: Address, payerVault: auth(FungibleToken.Withdraw) &FlowToken.Vault) {
+            pre {
+                additionalDuration > 0.0:
+                    "Extension duration must be positive"
+                additionalDuration % 3600.0 == 0.0:
+                    "Extension duration must be a multiple of 3600 seconds (1 hour)"
+            }
+
+            let hours = additionalDuration / 3600.0
+            let fee: UFix64 = hours * FlowJukeBox.pricePerHour
+
+            // Take payment from provided vault
+            let payment <- payerVault.withdraw(amount: fee)
+
+            // Ensure the contract has a treasury and deposit the payment
+            FlowJukeBox.ensureTreasury()
+            let vault = FlowJukeBox.account.storage.borrow<&FlowToken.Vault>(
+                from: FlowJukeBox.TreasuryStoragePath
+            ) ?? panic("Contract Flow vault missing after ensureTreasury")
+            vault.deposit(from: <- payment)
+
+            // Apply the extension
+            self.queueDuration = self.queueDuration + additionalDuration
+            log("✅ Jukebox session extended by ".concat(additionalDuration.toString()).concat(" seconds by ").concat(extender.toString()))
+        }
+
+        // Internal helper used by contract-level extension helper
+        access(contract) fun _applyExtension(additionalDuration: UFix64) {
+            self.queueDuration = self.queueDuration + additionalDuration
         }
 
         access(all) fun playNext(): {String: AnyStruct} {
@@ -278,6 +311,37 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     // ────────────────────────────────────────────────
     // Collection Resource
     // ────────────────────────────────────────────────
+    // Contract-level helper to extend a jukebox given a direct NFT reference.
+    // This exists so transactions that hold storage references can call into the
+    // contract to perform the same fee handling as minting.
+    access(all) fun extendJukeboxWithRef(
+        nftRef: &FlowJukeBox.NFT,
+        additionalDuration: UFix64,
+        extender: Address,
+        payerVault: auth(FungibleToken.Withdraw) &FlowToken.Vault
+    ) {
+        pre {
+            additionalDuration > 0.0:
+                "Extension duration must be positive"
+            additionalDuration % 3600.0 == 0.0:
+                "Extension duration must be a multiple of 3600 seconds (1 hour)"
+        }
+
+        let hours = additionalDuration / 3600.0
+        let fee: UFix64 = hours * self.pricePerHour
+
+        let payment <- payerVault.withdraw(amount: fee)
+        self.ensureTreasury()
+        let vault = self.account.storage.borrow<&FlowToken.Vault>(
+            from: self.TreasuryStoragePath
+        ) ?? panic("Contract Flow vault missing after ensureTreasury")
+        vault.deposit(from: <- payment)
+
+        // Tell the NFT to apply the extension (uses contract-level access)
+        nftRef._applyExtension(additionalDuration: additionalDuration)
+        log("✅ Jukebox session extended by ".concat(additionalDuration.toString()).concat(" seconds by ").concat(extender.toString()))
+    }
+
     access(all) resource Collection: NonFungibleToken.Collection, NonFungibleToken.Provider, NonFungibleToken.CollectionPublic {
         access(all) var ownedNFTs: @{UInt64: {NonFungibleToken.NFT}}
         init() { self.ownedNFTs <- {} }
