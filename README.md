@@ -122,8 +122,8 @@ Set variables:
 
 TESTNET:
 ```
-$SIGNER = "FlowJukeBoxDev3"
-$CONTRACTADDR = "0x9c3f2ba02c56c5c3"
+$SIGNER = "FlowJukeBoxDev4"
+$CONTRACTADDR = "0x96b9e984c32f85f5"
 $FLOWNETWORK = "testnet"
 ```
 
@@ -148,7 +148,7 @@ flow project deploy --network $FLOWNETWORK --update
 
 Create a jukebox with songs and start
 ```
-flow transactions send .\cadence\transactions\create_jukebox.cdc ABACAC 7200.0 --signer $SIGNER -n $FLOWNETWORK
+flow transactions send .\cadence\transactions\create_jukebox.cdc PublicJukebox 7200.0 --signer $SIGNER -n $FLOWNETWORK
 flow transactions send .\cadence\transactions\start_autoplay.cdc 1 -n $FLOWNETWORK --signer $SIGNER
 flow transactions send .\cadence\transactions\add_entry.cdc 1 "https://www.youtube.com/watch?v=tiSjxSc2hac" "Eva Cassidy - Songbird" 230.0 30.0 --signer $SIGNER -n $FLOWNETWORK
 flow transactions send .\cadence\transactions\add_entry.cdc 1 "https://www.youtube.com/watch?v=QHfxMGEb9iE" "Eva Cassidy - You Take My Breath Away

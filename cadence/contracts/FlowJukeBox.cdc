@@ -1,18 +1,18 @@
-import "NonFungibleToken"
-import "FungibleToken"
-import "FlowToken"
-import "ViewResolver"
-import "MetadataViews"
+// import "NonFungibleToken"
+// import "FungibleToken"
+// import "FlowToken"
+// import "ViewResolver"
+// import "MetadataViews"
 // ///////////////TESTNET IMPORTS/////////////////////
-// import NonFungibleToken from 0x631e88ae7f1d7c20
-// import FungibleToken from 0x9a0766d93b6608b7
-// import FlowToken from 0x7e60df042a9c0868
-// import ViewResolver from 0x631e88ae7f1d7c20
-// import MetadataViews from 0x631e88ae7f1d7c20
+import NonFungibleToken from 0x631e88ae7f1d7c20
+import FungibleToken from 0x9a0766d93b6608b7
+import FlowToken from 0x7e60df042a9c0868
+import ViewResolver from 0x631e88ae7f1d7c20
+import MetadataViews from 0x631e88ae7f1d7c20
 
-// // Scheduled transactions
-// import FlowTransactionScheduler from 0x8c5303eaa26202d6
-// import FlowTransactionSchedulerUtils from 0x8c5303eaa26202d6
+// Scheduled transactions
+import FlowTransactionScheduler from 0x8c5303eaa26202d6
+import FlowTransactionSchedulerUtils from 0x8c5303eaa26202d6
 // ///////////////////////////////////////////////
 
 access(all) contract FlowJukeBox: NonFungibleToken {
@@ -35,6 +35,9 @@ access(all) contract FlowJukeBox: NonFungibleToken {
     // Duration bounds
     access(all) let minSongDuration: UFix64
     access(all) let maxSongDuration: UFix64
+    
+    // Queue size limit to prevent computation limit issues
+    access(all) let maxQueueSize: Int
 
     // ────────────────────────────────────────────────
     // Events
@@ -561,6 +564,7 @@ access(all) contract FlowJukeBox: NonFungibleToken {
         self.payoutPercentage = 0.80 // 80% to session owner
         self.minSongDuration = 15.0 // seconds
         self.maxSongDuration = 300.0 // seconds
+        self.maxQueueSize = 100 // Maximum 100 entries to prevent computation limit issues
         self.TreasuryStoragePath   = /storage/FlowJukeBoxTreasury
         self.pricePerHour = 10.0 // 10 FLOW per hour of queue time
 

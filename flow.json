@@ -260,6 +260,13 @@
 				"location": "FlowJukeBoxDev3.pkey"
 			}
 		},
+		"FlowJukeBoxDev4": {
+			"address": "96b9e984c32f85f5",
+			"key": {
+				"type": "file",
+				"location": "FlowJukeBoxDev4.pkey"
+			}
+		},
 		"emulator-account": {
 			"address": "f8d6e0586b0a20c7",
 			"key": {
@@ -278,9 +285,11 @@
 			]
 		},
 		"testnet": {
-			"FlowJukeBoxDev3": [
+			"FlowJukeBoxDev4": [
 				"FlowJukeBox",
-				"FlowJukeBoxTransactionHandler"
+				"FlowJukeBoxTransactionHandler",
+				"FlowTransactionScheduler",
+				"FlowTransactionSchedulerUtils"
 			]
 		}
 	}
